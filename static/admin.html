@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F1F5F9">
+  <meta name="robots" content="noindex, nofollow">
+  <title>PAKAL Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/static/pakal-logo.svg">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/admin.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="#" data-admin-home aria-label="PAKAL Admin" title="Package &amp; Application Kit Architecture Layer">
+        <img class="brand-logo" src="/static/pakal-logo.svg" alt="" width="34" height="34">
+        <span class="brand-text">
+          <span class="brand-name" data-i18n="brand"></span>
+          <span class="brand-acronym" dir="ltr">Package &amp; Application Kit Architecture Layer</span>
+        </span>
+        <span class="admin-badge" data-i18n="adminBadge"></span>
+      </a>
+      <div class="header-actions">
+        <div class="segmented" role="group" aria-label="Language">
+          <button type="button" data-lang="he">HE</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="header-rescan" type="button" data-action="rescan" hidden></button>
+        <button class="icon-btn bordered" type="button" data-theme-toggle data-i18n-title="themeToggle"></button>
+        <a class="btn btn-ghost btn-sm" href="/"><span data-icon="external"></span><span data-i18n="openPortal"></span></a>
+        <span class="user-chip" id="user-chip" hidden><span data-icon="lock"></span><span id="user-name" class="mono"></span></span>
+        <button class="icon-btn" id="logout-btn" type="button" data-i18n-title="logout" hidden><span data-icon="logout"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="login-wrap" id="login-view" hidden>
+    <form class="card login-card" id="login-form" autocomplete="on" novalidate>
+      <div class="brand"><img class="brand-logo" src="/static/pakal-logo.svg" alt="" width="32" height="32"></div>
+      <h1 data-i18n="loginTitle"></h1>
+      <p data-i18n="loginSubtitle"></p>
+      <div class="form">
+        <label class="field"><span data-i18n="username"></span><input class="input" name="username" autocomplete="username" dir="ltr" required maxlength="128"></label>
+        <label class="field"><span data-i18n="password"></span><input class="input" name="password" type="password" autocomplete="current-password" dir="ltr" required maxlength="256"></label>
+        <div class="form-error" id="login-error" role="alert"></div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" data-i18n="signIn"></button>
+        <p class="login-hint" data-i18n="loginHint"></p>
+        <div class="login-divider" id="login-divider" hidden><span data-i18n="loginOr"></span></div>
+        <a class="btn btn-secondary btn-lg btn-block" id="login-sso" href="#" hidden><span data-icon="shield"></span><span data-i18n="loginWithKeycloak"></span></a>
+      </div>
+    </form>
+  </div>
+
+  <div class="admin-shell" id="shell" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-label" data-i18n="manage"></div>
+      <button class="side-item" type="button" data-view="overview"><span data-icon="activity"></span><span data-i18n="navOverview"></span></button>
+      <button class="side-item" type="button" data-view="apps"><span data-icon="grid"></span><span data-i18n="navApps"></span><span class="count" id="count-apps"></span></button>
+      <button class="side-item" type="button" data-view="stacks"><span data-icon="layers"></span><span data-i18n="navStacks"></span><span class="count" id="count-stacks"></span></button>
+      <button class="side-item" type="button" data-view="platforms"><span data-icon="globe"></span><span data-i18n="navPlatforms"></span><span class="count" id="count-platforms"></span></button>
+      <div class="sidebar-label" data-i18n="engage"></div>
+      <button class="side-item" type="button" data-view="feedback"><span data-icon="message"></span><span data-i18n="navFeedback"></span><span class="count-badge" id="count-feedback" hidden></span></button>
+      <div class="sidebar-label" data-i18n="system"></div>
+      <button class="side-item" type="button" data-view="sso"><span data-icon="shield"></span><span data-i18n="navSso"></span><span class="sso-dot" id="sso-dot"></span></button>
+      <button class="side-item" type="button" data-view="nexus"><span data-icon="package"></span><span data-i18n="navNexus"></span><span class="sso-dot" id="nexus-dot"></span></button>
+      <button class="side-item" type="button" data-view="interface"><span data-icon="eye"></span><span data-i18n="navInterface"></span><span class="count-badge" id="count-hidden-ui" hidden></span></button>
+    </aside>
+    <main class="admin-main" id="admin-main"></main>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-credits" data-i18n="footerCredits">נבנה ומתוחזק ב-❤️ על ידי צוות שרתים</span>
+    </div>
+  </footer>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <h2 id="drawer-title"></h2>
+      <button class="icon-btn" type="button" data-action="close-drawer" data-i18n-title="close"><span data-icon="x"></span></button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-foot" id="drawer-foot"></div>
+  </aside>
+
+  <div class="modal-backdrop confirm-backdrop" id="confirm" hidden>
+    <div class="card confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h3 id="confirm-title"></h3>
+      <p id="confirm-text"></p>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" id="confirm-cancel" data-i18n="cancel"></button>
+        <button class="btn btn-danger" type="button" id="confirm-ok"></button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="icon-file" accept=".svg,.png,.ico,.jpg,.jpeg,.gif,.webp,image/*" hidden>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

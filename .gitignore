@@ -1,0 +1,91 @@
+# ---------------------------------------------------------------------------
+# Secrets & local environment - never commit credentials, hashes or tokens
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.kdbx
+secrets/
+credentials*.json
+
+# ---------------------------------------------------------------------------
+# Runtime data - SQLite settings DB, caches, uploads, build workspaces
+# ---------------------------------------------------------------------------
+data/
+pakal-data/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+cache.json
+cache.json.tmp
+upload-tmp/
+uploads/
+docker-builds/
+extracted-icons/
+
+# ---------------------------------------------------------------------------
+# NetApp share mirrors & local test installers (mounted at /mnt/apps in prod)
+# ---------------------------------------------------------------------------
+mnt/
+netapp_apps/
+test_apps/
+apps/
+*.exe
+*.msi
+*.msix
+*.iso
+
+# ---------------------------------------------------------------------------
+# Build artefacts, image exports & archives
+# ---------------------------------------------------------------------------
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.whl
+*.nupkg
+dist/
+build/
+*.egg-info/
+_backup_*/
+*.bak
+*.tmp
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+*.log
+logs/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Editors & OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

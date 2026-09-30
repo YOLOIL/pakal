@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EEF2FB">
+  <meta name="application-name" content="PAKAL">
+  <title>פ.ק.ל | פורטל התוכנות והפיתוח</title>
+  <link rel="icon" type="image/svg+xml" href="/static/pakal-logo.svg">
+  <link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="#home" aria-label="PAKAL - Package &amp; Application Kit Architecture Layer" title="Package &amp; Application Kit Architecture Layer">
+        <img class="brand-logo" src="/static/pakal-logo.svg" alt="" width="34" height="34">
+        <span class="brand-text">
+          <span class="brand-name" data-i18n="brand"></span>
+          <span class="brand-acronym" dir="ltr">Package &amp; Application Kit Architecture Layer</span>
+        </span>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-sub" data-i18n="brandSub"></span>
+      </a>
+
+      <nav class="nav" aria-label="Main">
+        <button class="nav-item" type="button" data-view="home"><span data-i18n="navHome"></span></button>
+        <button class="nav-item" type="button" data-view="apps"><span data-i18n="navApps"></span><span class="nav-count" id="count-apps">0</span></button>
+        <button class="nav-item" type="button" data-view="bundles" data-ui="tab_bundles"><span data-i18n="navStacks"></span></button>
+        <button class="nav-item" type="button" data-view="platforms" data-ui="tab_platforms"><span data-i18n="navPlatforms"></span></button>
+        <button class="nav-item" type="button" data-view="docker" data-ui="tab_docker"><span data-i18n="navDocker"></span></button>
+        <button class="nav-item" type="button" data-view="actions" data-ui="tab_actions"><span data-i18n="navActions"></span></button>
+      </nav>
+
+      <div class="header-actions">
+        <label class="search">
+          <span data-icon="search"></span>
+          <input type="search" id="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="searchPlaceholder" data-i18n-aria="search">
+          <button class="search-clear" type="button" data-action="clear-search" data-i18n-title="clearSearch" hidden><span data-icon="x"></span></button>
+          <kbd class="kbd" data-shortcut></kbd>
+        </label>
+        <div class="segmented" role="group" aria-label="Language" data-ui="btn_language">
+          <button type="button" data-lang="he">HE</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn bordered" type="button" data-action="sync" data-i18n-title="syncLabel" data-ui="btn_sync"><span data-icon="refresh"></span></button>
+        <button class="icon-btn bordered" type="button" data-theme-toggle data-i18n-title="themeToggle" data-ui="btn_theme"></button>
+        <div class="user-slot" id="user-slot"></div>
+        <a class="icon-btn" id="admin-link" href="#home" data-i18n-title="admin" hidden><span data-icon="settings"></span></a>
+      </div>
+    </div>
+  </header>
+
+  <div class="sso-banner" id="sso-banner" role="status" aria-live="polite" hidden></div>
+
+  <main class="content">
+    <section class="view" id="view-home">
+      <div class="hero">
+        <h1 class="hero-title"><span data-i18n="heroBrand"></span><span class="sep" aria-hidden="true">|</span><span data-i18n="heroTitle"></span></h1>
+        <label class="search hero-search">
+          <span data-icon="search"></span>
+          <input type="search" id="hero-search" autocomplete="off" spellcheck="false" data-i18n-placeholder="heroSearchPlaceholder" data-i18n-aria="search">
+          <button class="search-clear" type="button" data-action="clear-search" data-i18n-title="clearSearch" hidden><span data-icon="x"></span></button>
+          <kbd class="kbd" data-shortcut></kbd>
+        </label>
+      </div>
+      <div id="home-dynamic"></div>
+    </section>
+
+    <section class="view" id="view-apps">
+      <div class="page-head">
+        <h2 class="page-title" data-i18n="navApps"></h2>
+        <div class="toolbar">
+          <select id="os-filter" class="select" data-i18n-aria="osFilter"></select>
+          <select id="sort-select" class="select" data-i18n-aria="sortBy"></select>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="pills" id="category-pills" role="tablist"></div>
+      </div>
+      <div class="results-line" id="results-line"></div>
+      <div class="grid grid-apps" id="apps-grid"></div>
+    </section>
+
+    <section class="view" id="view-bundles">
+      <div class="page-head">
+        <h2 class="page-title" data-i18n="navStacks"></h2>
+      </div>
+      <div class="grid grid-stacks" id="bundles-grid"></div>
+    </section>
+
+    <section class="view" id="view-platforms">
+      <div class="page-head">
+        <h2 class="page-title" data-i18n="navPlatforms"></h2>
+      </div>
+      <div class="grid grid-platforms" id="platforms-grid"></div>
+    </section>
+
+    <section class="view" id="view-actions">
+      <div class="actions-panel" id="actions-hub" data-panel="hub">
+        <div class="page-head">
+          <div>
+            <h2 class="page-title" data-i18n="navActions"></h2>
+            <p class="page-subtitle" data-i18n="actionsSubtitle"></p>
+          </div>
+        </div>
+        <div class="hub-grid" id="hub-grid"></div>
+      </div>
+
+      <div class="actions-panel" id="actions-tool-nexus" data-panel="nexus" hidden>
+        <div class="tool-head">
+          <button class="btn btn-ghost btn-sm tool-back" type="button" data-action="hub-back"><span data-icon="arrow" data-icon-class="icon-back"></span><span data-i18n="hubBack"></span></button>
+          <div class="tool-title">
+            <span class="tool-glyph tool-glyph-nexus"><span data-icon="upload"></span></span>
+            <div>
+              <h2 class="page-title" data-i18n="hubNexusTitle"></h2>
+              <p class="page-subtitle" data-i18n="upIntro"></p>
+            </div>
+          </div>
+        </div>
+        <div id="actions-root"></div>
+        <input type="file" id="package-input" multiple hidden accept=".whl,.gz,.tgz,.nupkg">
+        <input type="file" id="package-folder-input" multiple hidden webkitdirectory>
+      </div>
+
+      <div class="actions-panel dk-scope" id="actions-tool-docker" data-panel="docker" dir="ltr" lang="en" hidden>
+        <div class="tool-head">
+          <button class="btn btn-ghost btn-sm tool-back" type="button" data-action="hub-back"><span data-icon="arrow"></span><span>Back to Hub</span></button>
+          <div class="tool-title">
+            <span class="tool-glyph tool-glyph-docker"><span data-icon="container"></span></span>
+            <div>
+              <h2 class="page-title">Docker Image Builder</h2>
+              <p class="page-subtitle">Turn a project ZIP with a Dockerfile into an image in the organizational registry - built, tagged and pushed with a live log.</p>
+            </div>
+          </div>
+        </div>
+        <div id="docker-build-root"></div>
+        <input type="file" id="docker-zip-input" hidden accept=".zip,application/zip">
+      </div>
+    </section>
+
+    <section class="view dk-scope" id="view-docker" dir="ltr" lang="en">
+      <div id="docker-root"></div>
+    </section>
+    <input type="file" id="app-file-input" hidden>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-credits" data-i18n="footerCredits">נבנה ומתוחזק ב-❤️ על ידי צוות שרתים</span>
+      <span class="footer-status" id="footer-status"></span>
+    </div>
+  </footer>
+
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="icon-btn modal-close" id="modal-close" type="button" data-i18n-title="close"><span data-icon="x"></span></button>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop dk-scope" id="docker-modal" dir="ltr" lang="en" hidden>
+    <div class="modal dk-modal" role="dialog" aria-modal="true" aria-labelledby="dk-modal-title">
+      <button class="icon-btn modal-close" id="docker-modal-close" type="button" title="Close" aria-label="Close"><span data-icon="x"></span></button>
+      <div class="modal-body" id="docker-modal-body"></div>
+    </div>
+  </div>
+
+  <button class="nav-feedback" type="button" data-action="feedback" data-i18n-title="feedbackNav" data-ui="btn_feedback"><span data-icon="lightbulb"></span><span data-i18n="feedbackNav"></span></button>
+
+  <aside class="announcement" id="announcement" role="status" aria-live="polite" hidden></aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/docker.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

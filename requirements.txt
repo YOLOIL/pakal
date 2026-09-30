@@ -1,0 +1,10 @@
+fastapi==0.141.1
+uvicorn==0.54.0
+pydantic==2.13.5
+SQLAlchemy==2.0.54
+PyJWT==2.10.1
+bcrypt==4.2.1
+icoextract==0.1.5
+pefile==2024.8.26
+olefile==0.47
+ldap3==2.9.1

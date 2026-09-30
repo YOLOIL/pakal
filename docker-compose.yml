@@ -1,0 +1,81 @@
+services:
+  pakal:
+    # Organisation-specific values live in .env (copy .env.example); nothing internal is hard-coded here.
+    image: ${PAKAL_REGISTRY:-registry.example.com:5000}/pakal/web-appstore:${PAKAL_VERSION:-1.8}
+    container_name: pakal_appstore
+    restart: always
+    environment:
+      - PORT=8971
+      - AUTO_RESCAN_MINUTES=30
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-pakal}
+      # No built-in password - without a hash the emergency local login stays disabled.
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-}
+      # The admin console lives only here; /admin returns 404. See EMERGENCY_ADMIN_README.md.
+      - ADMIN_SECURE_PATH=${ADMIN_SECURE_PATH:-/pakal-management-console}
+      - ADMIN_APP_UPLOAD_MAX_MB=${ADMIN_APP_UPLOAD_MAX_MB:-8192}
+      # Keycloak / LDAP defaults - everything can be changed later in the admin console (saved values win).
+      # Unset variables fall back to the built-in PAKAL defaults (see pakal/config.py).
+      - KEYCLOAK_ENABLED=${KEYCLOAK_ENABLED:-true}
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-master}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-pakal}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
+      - KEYCLOAK_REDIRECT_URI=${KEYCLOAK_REDIRECT_URI:-}
+      - KEYCLOAK_POST_LOGOUT_REDIRECT_URI=${KEYCLOAK_POST_LOGOUT_REDIRECT_URI:-}
+      - KEYCLOAK_TLS_INSECURE=${KEYCLOAK_TLS_INSECURE:-true}
+      - KEYCLOAK_CA_BUNDLE=${KEYCLOAK_CA_BUNDLE:-}
+      - LDAP_URL=${LDAP_URL:-}
+      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE:-}
+      - LDAP_ADMIN=${LDAP_ADMIN:-}
+      - LDAP_PASSWORD=${LDAP_PASSWORD:-}
+      - LDAP_ADMIN_GROUP_DN=${LDAP_ADMIN_GROUP_DN:-}
+      - USER_EMAIL_DOMAIN=${USER_EMAIL_DOMAIN:-}
+      - COOKIE_SECURE=true
+      # Nexus package uploader - optional seed values from .env; the admin console is the normal place to set them.
+      - NEXUS_URL=${NEXUS_URL:-}
+      - NEXUS_USERNAME=${NEXUS_USERNAME:-}
+      - NEXUS_PASSWORD=${NEXUS_PASSWORD:-}
+      - NEXUS_PYPI_REPO=${NEXUS_PYPI_REPO:-}
+      - NEXUS_NPM_REPO=${NEXUS_NPM_REPO:-}
+      - NEXUS_POWERSHELL_REPO=${NEXUS_POWERSHELL_REPO:-}
+      - NEXUS_TLS_INSECURE=${NEXUS_TLS_INSECURE:-true}
+      # Docker tab (registry catalog) and ZIP-to-image builds on the Actions tab; editable in the admin console.
+      - NEXUS_DOCKER_REGISTRY=${NEXUS_DOCKER_REGISTRY:-}
+      - NEXUS_DOCKER_USERNAME=${NEXUS_DOCKER_USERNAME:-}
+      - NEXUS_DOCKER_PASSWORD=${NEXUS_DOCKER_PASSWORD:-}
+      - NEXUS_DOCKER_NAMESPACE=${NEXUS_DOCKER_NAMESPACE:-}
+      - DOCKER_BUILD_ENABLED=${DOCKER_BUILD_ENABLED:-true}
+      - DOCKER_BUILD_ADMIN_ONLY=${DOCKER_BUILD_ADMIN_ONLY:-true}
+      - DOCKER_MAX_CONTEXT_MB=${DOCKER_MAX_CONTEXT_MB:-2048}
+      - DOCKER_BUILD_TIMEOUT_SECONDS=${DOCKER_BUILD_TIMEOUT_SECONDS:-3600}
+      - DOCKER_MAX_CONCURRENT_BUILDS=${DOCKER_MAX_CONCURRENT_BUILDS:-2}
+    # The container runs as uid 1000; it reaches the host Docker socket through the socket's group.
+    # Find the host value with: stat -c '%g' /var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      # Read-write so admins can add files from an app card; the container user needs write access on the share.
+      - /mnt/netapp_apps:/mnt/apps
+      - pakal-data:/data
+      # Host Docker engine for image builds. Root-equivalent on the host - builds are admin-only by default.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - pakal-internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.pakal.rule=Host(`${PAKAL_HOST:-pakal.example.com}`)"
+      - "traefik.http.routers.pakal.entrypoints=websecure"
+      - "traefik.http.routers.pakal.tls=true"
+      - "traefik.http.services.pakal.loadbalancer.server.port=8971"
+
+volumes:
+  pakal-data:
+
+networks:
+  pakal-internal:
+    driver: bridge
+  proxy:
+    external: true
+    name: proxy
