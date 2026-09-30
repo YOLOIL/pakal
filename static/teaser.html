@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#090d16">
+  <title>פ.ק.ל - מערכת חדשה להפצת תוכנה ו-DevOps</title>
+  <link rel="icon" type="image/svg+xml" href="pakal-logo.svg">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .teaser-layout { display: flex; flex-direction: column; gap: 22px; padding: 8px 0 48px; }
+    .teaser-panel { padding: 22px 22px 26px; }
+    .teaser-kicker {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      margin-bottom: 6px;
+    }
+    .teaser-kicker p { color: var(--text-3); font-size: 12.5px; }
+    .teaser-stage button, .teaser-stage select, .teaser-stage a { pointer-events: none; }
+    .teaser-hub .hub-grid { margin-top: 18px; }
+    .teaser-split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); gap: 16px; align-items: start; }
+    .teaser-banner {
+      margin-top: auto; padding: 16px 24px; text-align: center;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.01em; color: #fff;
+      background: linear-gradient(120deg, #312e81 0%, #1d63ed 52%, #0891b2 100%);
+    }
+    @media (max-width: 960px) { .teaser-split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="#top">
+        <img class="brand-logo" src="pakal-logo.svg" alt="" width="34" height="34">
+        <span class="brand-text">
+          <span class="brand-name">פ.ק.ל</span>
+          <span class="brand-acronym" dir="ltr">Platform for Artifacts, Knowledge, Automation &amp; Logistics</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="תצוגה">
+        <span class="nav-item">סקירה</span>
+        <span class="nav-item">מאגר התוכנות</span>
+        <span class="nav-item">מאגר Docker</span>
+        <span class="nav-item active">פעולות</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="content" id="top">
+    <section class="hero">
+      <h1 class="hero-title">פ.ק.ל - מערכת חדשה להפצת תוכנה ו-DevOps</h1>
+      <p class="hero-subtitle" dir="ltr" lang="en">PAKAL — Platform for Artifacts, Knowledge, Automation &amp; Logistics</p>
+    </section>
+
+    <div class="teaser-layout">
+      <section class="card teaser-panel teaser-hub teaser-stage" aria-labelledby="teaser-actions">
+        <div class="teaser-kicker">
+          <h2 class="section-title" id="teaser-actions">מרכז הפעולות</h2>
+          <p>שני כלים, כרטיס אחד לכל אחד</p>
+        </div>
+        <div class="hub-grid">
+          <button class="hub-card hub-card-nexus" type="button">
+            <span class="hub-card-top">
+              <span class="hub-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+              <span class="hub-go" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
+            </span>
+            <span class="hub-card-body">
+              <strong class="hub-title">העלאת ארטיפקטים ל-Nexus</strong>
+              <span class="hub-desc">העלאה מרוכזת של חבילות Python, NPM ומודולי PowerShell למאגרי ה-Nexus המקומיים - גם תיקיות עם מאות קבצים.</span>
+            </span>
+            <span class="hub-chips"><span class="hub-chip">Python (PyPI)</span><span class="hub-chip">NPM</span><span class="hub-chip">PowerShell</span></span>
+            <span class="hub-status tone-ok"><span class="hub-dot"></span><span>מוכן</span></span>
+          </button>
+          <button class="hub-card hub-card-docker" type="button" dir="ltr" lang="en">
+            <span class="hub-card-top">
+              <span class="hub-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h20v5a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z"/><rect x="4" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="12" y="8" width="4" height="4"/><rect x="8" y="4" width="4" height="4"/></svg></span>
+              <span class="hub-go" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
+            </span>
+            <span class="hub-card-body">
+              <strong class="hub-title">Docker Image Builder</strong>
+              <span class="hub-desc">Upload a project ZIP with a Dockerfile - the server builds the image, tags it and pushes it to the organizational registry.</span>
+            </span>
+            <span class="hub-chips"><span class="hub-chip">Dockerfile</span><span class="hub-chip">Build</span><span class="hub-chip">Push</span><span class="hub-chip">Live log</span></span>
+            <span class="hub-status tone-busy"><span class="hub-dot"></span><span>Building…</span></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card teaser-panel dk-scope teaser-stage" dir="ltr" lang="en" aria-labelledby="teaser-docker">
+        <div class="teaser-kicker">
+          <h2 class="section-title" id="teaser-docker">Docker Catalog</h2>
+          <p>Native left-to-right layout, copyable commands, port bindings</p>
+        </div>
+        <div class="teaser-split">
+          <div>
+            <div class="grid grid-apps" style="margin-bottom: 16px;">
+              <button class="card dk-card" type="button">
+                <span class="dk-glyph"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+                <span class="dk-card-body">
+                  <strong>postgres</strong>
+                  <span class="dk-card-ns">pakal/</span>
+                  <span class="dk-card-meta"><span class="badge badge-accent dk-tag-badge">latest</span><span class="dk-card-count">3 tags</span></span>
+                </span>
+              </button>
+              <button class="card dk-card" type="button">
+                <span class="dk-glyph"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h20v5a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z"/><rect x="4" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="12" y="8" width="4" height="4"/><rect x="8" y="4" width="4" height="4"/></svg></span>
+                <span class="dk-card-body">
+                  <strong>web-portal</strong>
+                  <span class="dk-card-ns">pakal/</span>
+                  <span class="dk-card-meta"><span class="badge badge-accent dk-tag-badge">2.3.0</span><span class="dk-card-count">4 tags</span></span>
+                </span>
+              </button>
+            </div>
+            <div class="dk-codeblock">
+              <div class="dk-codeblock-head"><span>bash</span><span class="dk-codeblock-copy">Copy</span></div>
+              <pre><code>docker pull registry.example.com:5000/pakal/postgres:latest</code></pre>
+            </div>
+            <div class="dk-codeblock">
+              <div class="dk-codeblock-head"><span>bash</span><span class="dk-codeblock-copy">Copy</span></div>
+              <pre><code>docker run -d --name postgres \
+  -p 5432:5432 \
+  -v pgdata:/var/lib/postgresql/data \
+  registry.example.com:5000/pakal/postgres:latest</code></pre>
+            </div>
+          </div>
+          <div class="dk-panel">
+            <div class="dk-panel-head"><strong>Exposed ports</strong></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Port</th><th>Protocol</th><th>Suggested bind</th></tr></thead>
+                <tbody>
+                  <tr><td class="num">5432</td><td class="num">tcp</td><td class="num">5432:5432</td></tr>
+                  <tr><td class="num">8080</td><td class="num">tcp</td><td class="num">8080:8080</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card teaser-panel teaser-stage" aria-labelledby="teaser-nexus">
+        <div class="teaser-kicker">
+          <h2 class="section-title" id="teaser-nexus">העלאה מרוכזת ל-Nexus</h2>
+          <p>מאגר יעד לכל שורה, וסינון לפי סטטוס</p>
+        </div>
+        <div class="queue-head">
+          <div class="queue-title">
+            <h3>תור העלאה</h3>
+            <div class="queue-chips">
+              <span class="pill active">הכל <span class="pill-count">4</span></span>
+              <span class="pill">ממתין <span class="pill-count">1</span></span>
+              <span class="pill">מעלה <span class="pill-count">1</span></span>
+              <span class="pill">הצליח <span class="pill-count">2</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="batch">
+          <span class="batch-bar" aria-hidden="true"><span style="width: 62%"></span></span>
+          <span class="batch-text">62% · 2 / 4</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table queue-table">
+            <thead>
+              <tr><th>קובץ</th><th>גודל</th><th>מאגר יעד</th><th>סטטוס</th></tr>
+            </thead>
+            <tbody>
+              <tr class="q-row q-success">
+                <td class="file-name">requests-2.32.3-py3-none-any.whl</td>
+                <td class="num">48 KB</td>
+                <td><select class="select select-sm q-select" aria-label="מאגר יעד"><option>pypi-hosted</option><option>pypi-internal</option></select></td>
+                <td class="q-status-cell"><span class="badge badge-success">הצליח</span></td>
+              </tr>
+              <tr class="q-row q-success">
+                <td class="file-name">lodash-4.17.21.tgz</td>
+                <td class="num">72 KB</td>
+                <td><select class="select select-sm q-select" aria-label="מאגר יעד"><option>npm-hosted</option></select></td>
+                <td class="q-status-cell"><span class="badge badge-success">הצליח</span></td>
+              </tr>
+              <tr class="q-row q-uploading">
+                <td class="file-name">PSReadLine.2.3.6.nupkg</td>
+                <td class="num">1.2 MB</td>
+                <td><select class="select select-sm q-select" aria-label="מאגר יעד"><option>psgallery</option></select></td>
+                <td class="q-status-cell"><span class="badge badge-accent"><span class="status-dot busy"></span>מעלה</span></td>
+              </tr>
+              <tr class="q-row q-pending">
+                <td class="file-name">portal-1.4.0-py3-none-any.whl</td>
+                <td class="num">210 KB</td>
+                <td><select class="select select-sm q-select is-manual" aria-label="מאגר יעד"><option>pypi-internal</option><option>pypi-hosted</option></select> <span class="q-manual">ידני</span></td>
+                <td class="q-status-cell"><span class="badge badge-neutral">ממתין</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="teaser-stage" aria-labelledby="teaser-bundles">
+        <div class="teaser-kicker">
+          <h2 class="section-title" id="teaser-bundles">ערכות לפי תפקיד</h2>
+          <p>הורדה אחת, כל הכלים של התפקיד</p>
+        </div>
+        <div class="grid grid-stacks">
+          <article class="card stack-card">
+            <header class="stack-head">
+              <span class="glyph-tile" style="--tint:#F59E0B"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg></span>
+              <div>
+                <h3>מפתח אלקטרוניקה</h3>
+                <p>תכנון מעגלים, כלי STM32, גישה טורית ו-SSH.</p>
+              </div>
+            </header>
+            <ul class="tool-list">
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">KI</span><span class="tool-name">KiCad</span><span class="tool-ver">8.0.4</span></li>
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">PU</span><span class="tool-name">PuTTY</span><span class="tool-ver">0.81</span></li>
+              <li class="tool-row missing"><span class="app-icon app-icon-xs app-icon-letter">–</span><span class="tool-name">STM32Cube</span></li>
+            </ul>
+            <footer class="stack-foot">
+              <span class="stack-meta">2 כלים · <span dir="ltr">186 MB</span></span>
+              <span class="stack-actions"><button class="btn btn-primary btn-sm" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>הורדת הכל</span></button></span>
+            </footer>
+          </article>
+          <article class="card stack-card">
+            <header class="stack-head">
+              <span class="glyph-tile" style="--tint:#6366F1"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+              <div>
+                <h3>מפתח תוכנה</h3>
+                <p>עורך קוד, ניהול גרסאות, קונטיינרים וסביבות הרצה.</p>
+              </div>
+            </header>
+            <ul class="tool-list">
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">VS</span><span class="tool-name">VS Code</span><span class="tool-ver">1.93</span></li>
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">GI</span><span class="tool-name">Git</span><span class="tool-ver">2.46</span></li>
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">PY</span><span class="tool-name">Python</span><span class="tool-ver">3.12</span></li>
+            </ul>
+            <footer class="stack-foot">
+              <span class="stack-meta">5 כלים · <span dir="ltr">412 MB</span></span>
+              <span class="stack-actions"><button class="btn btn-primary btn-sm" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>הורדת הכל</span></button></span>
+            </footer>
+          </article>
+          <article class="card stack-card">
+            <header class="stack-head">
+              <span class="glyph-tile" style="--tint:#0EA5E9"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+              <div>
+                <h3>SysAdmin / NetOps</h3>
+                <p>טרמינלים מרוחקים, העברת קבצים וסריקת רשת.</p>
+              </div>
+            </header>
+            <ul class="tool-list">
+              <li class="tool-row"><span class="app-icon app-icon-xs app-icon-letter">PU</span><span class="tool-name">PuTTY</span><span class="tool-ver">0.81</span></li>
+              <li class="tool-row missing"><span class="app-icon app-icon-xs app-icon-letter">–</span><span class="tool-name">WinSCP</span></li>
+              <li class="tool-row missing"><span class="app-icon app-icon-xs app-icon-letter">–</span><span class="tool-name">Nmap</span></li>
+            </ul>
+            <footer class="stack-foot">
+              <span class="stack-meta">1 כלים · <span dir="ltr">4 MB</span></span>
+              <span class="stack-actions"><button class="btn btn-primary btn-sm" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>הורדת הכל</span></button></span>
+            </footer>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="teaser-banner">זמין עכשיו ברשת פיתוח 108</footer>
+</body>
+</html>
