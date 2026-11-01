@@ -46,9 +46,10 @@ UPLOADS_DIR = DATA_DIR / "uploads"
 
 AUTO_RESCAN_MINUTES = _env_int("AUTO_RESCAN_MINUTES", 30)
 INITIAL_SCAN_WAIT_SECONDS = _env_float("INITIAL_SCAN_WAIT_SECONDS", 20)
-MAX_SCAN_DEPTH = _env_int("MAX_SCAN_DEPTH", 2)
+# Installer walk inside one application (version / OS / arch subfolders).
+MAX_SCAN_DEPTH = _env_int("MAX_SCAN_DEPTH", 8)
 # How deep to descend through vendor/grouping folders (e.g. microsoft/visual studio) looking for app roots.
-MAX_VENDOR_DEPTH = _env_int("MAX_VENDOR_DEPTH", 3)
+MAX_VENDOR_DEPTH = _env_int("MAX_VENDOR_DEPTH", 6)
 PAYLOAD_THRESHOLD = _env_int("PAYLOAD_THRESHOLD", 15)
 
 INSTALLER_EXTENSIONS: Tuple[str, ...] = tuple(

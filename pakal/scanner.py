@@ -2,8 +2,9 @@
 Installer share scanner.
 
 Share layout:
-    <APPS_ROOT>/<AppName>/<installer>                  primary installers
-    <APPS_ROOT>/<AppName>/<version|os>/<installer>     up to MAX_SCAN_DEPTH folder levels
+    <APPS_ROOT>/<AppName>/<installer>                       primary installers
+    <APPS_ROOT>/<Vendor>/<AppName>/...                      nested app roots (MAX_VENDOR_DEPTH)
+    <APPS_ROOT>/<AppName>/<version|os|arch>/<installer>     recursive walk (MAX_SCAN_DEPTH)
     <APPS_ROOT>/<AppName>/info.json                    optional metadata
     <APPS_ROOT>/<AppName>/icon.png                     optional custom icon
     <APPS_ROOT>/<AppName>/README* and LICENSE*         optional docs, also inside a zip

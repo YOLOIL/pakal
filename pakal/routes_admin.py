@@ -178,6 +178,7 @@ def overview(db: Session = Depends(get_session)) -> JSONResponse:
             "auto_rescan_minutes": store.rescan_interval_minutes(),
             "installer_extensions": list(config.INSTALLER_EXTENSIONS),
             "max_scan_depth": config.MAX_SCAN_DEPTH,
+            "max_vendor_depth": config.MAX_VENDOR_DEPTH,
             "icon_extraction": icons.extraction_available(),
             "msi_icon_extraction": icons.msi_extraction_available(),
             "favicon_fetch": config.FETCH_FAVICONS,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -305,6 +306,24 @@ def _seed_actions(session: Session) -> None:
         ))
 
 
+def _migrate_action_visibility(session: Session) -> None:
+    """One-shot: fold the legacy settings-map hide list into Action.enabled."""
+    raw = _get_setting(session, "action_visibility") or "{}"
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        data = {}
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if value != "hidden":
+                continue
+            row = session.get(Action, str(key))
+            if row:
+                row.enabled = False
+                log.info("Migrated hidden action %s -> Action.enabled=false", key)
+    _set_setting(session, "action_visibility", "{}")
+
+
 def _add_role_bundles(session: Session) -> None:
     """Existing installations get the role presets once, placed first; ids already in use are left alone."""
     existing = set(session.scalars(select(DevStack.id)))
@@ -336,8 +355,13 @@ def init_db() -> None:
         if _get_setting(session, "seeded_actions") is None:
             _seed_actions(session)
             _set_setting(session, "seeded_actions", "1")
+        if _get_setting(session, "migrated_action_visibility") is None:
+            session.flush()
+            _migrate_action_visibility(session)
+            _set_setting(session, "migrated_action_visibility", "1")
         session.flush()
         normalize_order(session, PlatformLink)
         normalize_order(session, DevStack)
         normalize_order(session, RepositoryLink)
+        normalize_order(session, Action)
     log.info("Database ready at %s", config.DATABASE_FILE)

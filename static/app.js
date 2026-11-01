@@ -21,13 +21,6 @@
       brand: "פ.ק.ל",
       brandSub: "פורטל התוכנות והפיתוח",
       heroBrand: "פ.ק.ל",
-      actShown: "מוצג",
-      actHidden: "מוסתר",
-      actHiddenTag: "מוסתר למשתמשים",
-      actToggleTip: "לחץ להסתרה או הצגה של פעולה זו למשתמשים",
-      actNowHidden: "הפעולה הוסתרה מהמשתמשים",
-      actNowShown: "הפעולה מוצגת שוב למשתמשים",
-      actToggleFailed: "עדכון הנראות נכשל",
       actNoneVisible: "אין כרגע פעולות זמינות.",
       tourStart: "סיור במערכת",
       heroSubtitle: "פלטפורמה ארגונית אחת לתוכנות, ערכות התקנה, מאגרי חבילות וכלי פיתוח בשירות עצמי.",
@@ -335,13 +328,6 @@
       brand: "PAKAL",
       brandSub: "Software & Development Portal",
       heroBrand: "PAKAL",
-      actShown: "Shown",
-      actHidden: "Hidden",
-      actHiddenTag: "Hidden from users",
-      actToggleTip: "Click to hide or show this action for users",
-      actNowHidden: "The action is now hidden from users",
-      actNowShown: "The action is visible to users again",
-      actToggleFailed: "Could not update visibility",
       actNoneVisible: "No actions are available right now.",
       tourStart: "Product tour",
       heroSubtitle: "One organizational platform for software, installation kits, package repositories, and self-service developer tools.",
@@ -678,7 +664,7 @@
     modalPath: [],
     pendingAppId: null,
     auth: null,
-    presentation: { status: {}, notes: {}, hidden_actions: [] },
+    presentation: { status: {}, notes: {} },
     relogin: { mode: null, remaining: 0, total: 0, timer: null },
     ui: {},
     announcement: null,
@@ -1107,25 +1093,19 @@
 
   // ---------------------------------------------------------- actions: hub
 
+  // Code-backed tool panels (metadata/order/enabled live in the Action table).
   const ACTION_TOOLS = ["nexus", "docker", "powershell"];
   const actionsHash = () => (state.actions.tool ? `actions/${state.actions.tool}` : "actions");
 
-  const isActionHidden = (tool) => ((state.presentation && state.presentation.hidden_actions) || []).includes(tool);
-
   function actionAdminBar(tool) {
     if (!isAdmin()) return "";
-    const hidden = isActionHidden(tool);
-    const label = hidden ? `🙈 ${t("actHidden")}` : `👁️ ${t("actShown")}`;
     return `
       <div class="hub-admin" dir="${state.lang === "he" ? "rtl" : "ltr"}" lang="${state.lang}">
-        <button class="action-vis-toggle${hidden ? " is-off" : " is-on"}" type="button" data-action="action-visibility" data-tool="${esc(tool)}" aria-pressed="${hidden ? "false" : "true"}" title="${esc(t("actToggleTip"))}" aria-label="${esc(`${label} - ${t("actToggleTip")}`)}">${esc(label)}</button>
         <button class="icon-btn hub-admin-btn" type="button" data-action="card-status-menu" data-key="tool:${esc(tool)}" title="${esc(t("stMenu"))}" aria-label="${esc(t("stMenu"))}">${icon("settings")}</button>
       </div>`;
   }
 
   function hubCard({ tool, title, desc, iconName, chips, status, tone, disabled = false, english = false, hit = "", admin = true }) {
-    const hidden = isActionHidden(tool);
-    if (hidden && !isAdmin()) return "";
     const hitAttrs = hit || `data-action="hub-open" data-tool="${esc(tool)}"`;
     const availability = cardKeyStatus(`tool:${tool}`);
     const maint = isBlockedStatus(availability);
@@ -1135,7 +1115,6 @@
       maint ? `is-maint is-${availability}` : "",
       locked ? "is-locked" : "",
       disabled ? "is-disabled" : "",
-      hidden ? "is-hidden-action" : "",
       isAdmin() ? "has-admin" : "",
     ].filter(Boolean).join(" ");
     return `
@@ -1157,36 +1136,7 @@
           <div class="hub-chips">${chips.map((c) => `<span class="hub-chip">${esc(c)}</span>`).join("")}</div>
           <div class="hub-status tone-${tone}"><span class="hub-dot"></span><span>${esc(status)}</span></div>
         </div>
-        ${hidden ? `<span class="hub-hidden-tag" dir="${state.lang === "he" ? "rtl" : "ltr"}">🙈 ${esc(t("actHiddenTag"))}</span>` : ""}
       </article>`;
-  }
-
-  function toggleActionVisibility(tool) {
-    return setActionVisibility(tool, !isActionHidden(tool));
-  }
-
-  async function setActionVisibility(tool, hide) {
-    if (!isAdmin() || !ACTION_TOOLS.includes(tool)) return;
-    const before = (state.presentation && state.presentation.hidden_actions) || [];
-    const after = hide ? [...new Set([...before, tool])] : before.filter((x) => x !== tool);
-    state.presentation = { ...state.presentation, hidden_actions: after };
-    renderHub();
-    try {
-      const response = await fetch("/api/manage/action-visibility", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json", "X-PAKAL-Request": "1" },
-        body: JSON.stringify({ tool, visibility: hide ? "hidden" : "active" }),
-      });
-      if (!response.ok) throw new Error(String(response.status));
-      toast(hide ? t("actNowHidden") : t("actNowShown"), "success", 2500);
-    } catch (err) {
-      state.presentation = { ...state.presentation, hidden_actions: before };
-      renderHub();
-      toast(`${t("actToggleFailed")} (${err.message})`, "error");
-    }
-    const btn = $(`.action-vis-toggle[data-tool="${tool}"]`);
-    if (btn) btn.focus({ preventScroll: true });
   }
 
   function nexusHubStatus() {
@@ -1280,7 +1230,7 @@
   function openTool(tool, { push = false } = {}) {
     const a = state.actions;
     const allowed = ACTION_TOOLS.includes(tool) && (tool !== "docker" || shown("docker_build"))
-      && (isAdmin() || (!isActionHidden(tool) && !isLockedKey(`tool:${tool}`)));
+      && (isAdmin() || !isLockedKey(`tool:${tool}`));
     const next = allowed ? tool : null;
     const changed = next !== a.tool;
     a.tool = next;
@@ -2539,10 +2489,8 @@
   function openStatusMenu(key, anchor) {
     const menu = $("#status-menu");
     if (!menu || !key || !anchor) return;
-    const tool = key.startsWith("tool:") ? key.slice(5) : "";
-    const current = tool && isActionHidden(tool) ? "hidden" : cardKeyStatus(key);
+    const current = cardKeyStatus(key);
     const items = [["active", t("stActive")], ["construction", `🚧 ${t("stConstruction")}`], ["soon", `⏳ ${t("stSoon")}`]];
-    if (tool) items.push(["hidden", `🙈 ${t("actHidden")}`]);
     menu.innerHTML = items.map(([status, label]) => `<button type="button" role="menuitem" data-action="card-status-set" data-key="${esc(key)}" data-status="${status}" class="${status === current ? "is-current" : ""}">${esc(label)}</button>`).join("");
     menu.hidden = false;
     const rect = anchor.getBoundingClientRect();
@@ -2553,11 +2501,6 @@
   async function setCardStatus(key, status) {
     const menu = $("#status-menu");
     if (menu) menu.hidden = true;
-    const tool = key.startsWith("tool:") ? key.slice(5) : "";
-    if (tool && status === "hidden") {
-      if (!isActionHidden(tool)) await setActionVisibility(tool, true);
-      return;
-    }
     try {
       const response = await fetch("/api/manage/card-status", {
         method: "PUT",
@@ -2571,8 +2514,7 @@
       else next[key] = status;
       state.presentation = { ...state.presentation, status: next };
       renderAll();
-      if (tool && isActionHidden(tool)) await setActionVisibility(tool, false);
-      else toast(t("stSaved"), "success", 2200);
+      toast(t("stSaved"), "success", 2200);
     } catch (err) {
       toast(`${t("stMenu")} (${err.message})`, "error");
     }
@@ -2805,9 +2747,9 @@
     }
     const presentation = fetchJson("/api/manage/presentation")
       .then((p) => {
-        state.presentation = { status: {}, notes: {}, hidden_actions: [], ...(p || {}) };
+        state.presentation = { status: {}, notes: {}, ...(p || {}) };
         const tool = state.actions.tool;
-        if (tool && !isAdmin() && (isActionHidden(tool) || isLockedKey(`tool:${tool}`))) openTool(null);
+        if (tool && !isAdmin() && isLockedKey(`tool:${tool}`)) openTool(null);
       })
       .catch(() => {});
     try {
@@ -2930,7 +2872,7 @@
       renderAll();
       renderActionsPanels();
       const tool = state.actions.tool;
-      if (tool && !renderedAsAdmin && (isActionHidden(tool) || isLockedKey(`tool:${tool}`))) openTool(null);
+      if (tool && !renderedAsAdmin && isLockedKey(`tool:${tool}`)) openTool(null);
     } else if (state.modal && state.modal.type !== "signin") refreshModal();
     emit("auth", state.auth);
   }
@@ -3823,10 +3765,6 @@
         else if (tech === "pypi" && shown("tab_pypi")) setView("pypi");
         break;
       }
-      case "action-visibility":
-        event.stopPropagation();
-        toggleActionVisibility(el.dataset.tool);
-        break;
       case "card-status-menu":
         event.stopPropagation();
         openStatusMenu(el.dataset.key, el);

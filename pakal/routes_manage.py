@@ -35,8 +35,6 @@ _STATUS_KEY = re.compile(r"^(app|tool):[A-Za-z0-9._~-]{1,120}$")
 _STATUSES = {"active", "construction", "soon"}
 _NOTES_KEY = "installer_notes"
 _STATUS_STORE = "card_status"
-_ACTION_TOOLS = {"nexus", "docker", "powershell"}
-_VISIBILITY_STORE = "action_visibility"
 
 
 def _clean_filename(value: str) -> str:
@@ -89,32 +87,13 @@ def _require_admin(request: Request) -> str:
 
 @router.get("/presentation")
 def presentation() -> JSONResponse:
-    """Public card availability, hidden actions and installer release notes."""
-    hidden = sorted(k for k, v in _json_map(_VISIBILITY_STORE).items() if k in _ACTION_TOOLS and v == "hidden")
+    """Public card availability (construction/soon) and installer release notes.
+
+    Action show/hide is owned by the Action.enabled column (Admin → Actions), not this map.
+    """
     return JSONResponse({
-        "status": _json_map(_STATUS_STORE), "notes": _json_map(_NOTES_KEY), "hidden_actions": hidden,
+        "status": _json_map(_STATUS_STORE), "notes": _json_map(_NOTES_KEY),
     }, headers=NO_STORE)
-
-
-@router.put("/action-visibility")
-async def set_action_visibility(request: Request) -> JSONResponse:
-    who = _require_admin(request)
-    try:
-        body = await request.json()
-    except Exception:  # noqa: BLE001
-        raise HTTPException(status_code=422, detail="Expected a JSON body")
-    tool = str((body or {}).get("tool") or "")
-    visibility = str((body or {}).get("visibility") or "")
-    if tool not in _ACTION_TOOLS or visibility not in {"active", "hidden"}:
-        raise HTTPException(status_code=422, detail="Unknown action or visibility")
-    data = _json_map(_VISIBILITY_STORE)
-    if visibility == "active":
-        data.pop(tool, None)
-    else:
-        data[tool] = "hidden"
-    _save_map(_VISIBILITY_STORE, data)
-    log.info("Action visibility %s=%s by %s", tool, visibility, who)
-    return JSONResponse({"tool": tool, "visibility": visibility}, headers=NO_STORE)
 
 
 @router.put("/card-status")

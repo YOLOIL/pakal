@@ -33,7 +33,7 @@
       status: "מצב", idle: "ממתין", scanning: "סורק…", lastScan: "סריקה אחרונה", duration: "משך", source: "מקור נתונים",
       sourceScan: "סריקה חיה", sourceCache: "מטמון מקומי", sourceNone: "אין", shareRoot: "נתיב השיתוף",
       available: "זמין", unavailable: "לא זמין", error: "שגיאה", none: "—",
-      extensions: "סיומות מתקינים", depth: "עומק סריקה", autoRescan: "סריקה אוטומטית", everyMinutes: (n) => `כל ${n} דקות`,
+      extensions: "סיומות מתקינים", depth: "עומק סריקה במתקינים", vendorDepth: "עומק תיקיות ספק", autoRescan: "סריקה אוטומטית", everyMinutes: (n) => `כל ${n} דקות`,
       schedulePanel: "תזמון סריקה אוטומטית", schedulePanelSub: "כל כמה דקות לסרוק מחדש את השיתוף. 0 מכבה סריקה אוטומטית. השינוי חל מיד.",
       rescanEvery: "סריקה כל", minutesUnit: "דקות", minutesShort: (n) => `${n} דק׳`, hoursShort: (n) => `${n} שע׳`,
       scheduleSaved: (n) => `הסריקה האוטומטית תרוץ כל ${n} דקות`, scheduleOff: "הסריקה האוטומטית כובתה",
@@ -249,7 +249,7 @@
       status: "Status", idle: "Idle", scanning: "Scanning…", lastScan: "Last scan", duration: "Duration", source: "Data source",
       sourceScan: "Live scan", sourceCache: "Local cache", sourceNone: "None", shareRoot: "Share root",
       available: "available", unavailable: "unavailable", error: "Error", none: "—",
-      extensions: "Installer extensions", depth: "Scan depth", autoRescan: "Auto rescan", everyMinutes: (n) => `every ${n} minutes`,
+      extensions: "Installer extensions", depth: "Installer scan depth", vendorDepth: "Vendor folder depth", autoRescan: "Auto rescan", everyMinutes: (n) => `every ${n} minutes`,
       schedulePanel: "Automatic rescan schedule", schedulePanelSub: "How often the share is rescanned. 0 disables automatic scans. Applies immediately.",
       rescanEvery: "Rescan every", minutesUnit: "minutes", minutesShort: (n) => `${n} min`, hoursShort: (n) => `${n} h`,
       scheduleSaved: (n) => `Automatic rescan will run every ${n} minutes`, scheduleOff: "Automatic rescan disabled",
@@ -724,6 +724,7 @@
         <dl class="kv">
           <dt>${esc(t("extensions"))}</dt><dd class="mono" dir="ltr" style="text-align:start">${esc(o.config.installer_extensions.join("  "))}</dd>
           <dt>${esc(t("depth"))}</dt><dd class="mono">${esc(o.config.max_scan_depth)}</dd>
+          <dt>${esc(t("vendorDepth"))}</dt><dd class="mono">${esc(o.config.max_vendor_depth)}</dd>
           <dt>${esc(t("autoRescan"))}</dt><dd>${esc(o.config.auto_rescan_minutes > 0 ? t("everyMinutes", o.config.auto_rescan_minutes) : t("disabled"))}</dd>
           <dt>${esc(t("iconExtraction"))}</dt><dd>${esc(o.config.icon_extraction ? t("enabled") : t("disabled"))}</dd>
           <dt>${esc(t("msiIconExtraction"))}</dt><dd>${esc(o.config.msi_icon_extraction ? t("enabled") : t("disabled"))}</dd>
