@@ -36,12 +36,29 @@ log = logging.getLogger("pakal.docker")
 
 _PUSHED_RE = re.compile(r"digest: (sha256:[0-9a-f]{64}) size: (\d+)")
 IMAGE_NAME_RE = re.compile(r"^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*){0,3}$")
+_HUB_HOST_RE = re.compile(r"docker\.io", re.IGNORECASE)
+_HUB_NET_RE = re.compile(
+    r"tls|x509|certificate|handshake|timed?\s*out|timeout|connection|dial tcp|no such host|"
+    r"i/o timeout|network is unreachable|\bEOF\b|proxyconnect|failed to resolve|temporary failure",
+    re.IGNORECASE,
+)
 _MAX_MEMBERS = 20000
 _EXPANSION_FACTOR = 4
 _ENGINE_TIMEOUT = 30.0
 _WINDOWS_RESERVED = re.compile(r"^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$", re.IGNORECASE)
 
-_slots = threading.BoundedSemaphore(config.DOCKER_MAX_CONCURRENT_BUILDS)
+
+def airgap_notice(detail: str, cfg: Dict[str, Any]) -> str:
+    """Suggestion when a build dies because the engine cannot reach Docker Hub."""
+    text = detail or ""
+    if not _HUB_HOST_RE.search(text) or not _HUB_NET_RE.search(text):
+        return ""
+    host = docker_registry.registry_host(cfg) or "nexus.example.com:<PORT>"
+    return (
+        "Notice: Public Docker Hub (docker.io) is unreachable from this network. "
+        "Please ensure your Dockerfile uses base images from the internal Nexus registry "
+        f"(e.g., `FROM {host}/python:3.11-slim`)."
+    )
 
 
 class BuildError(Exception):
@@ -114,6 +131,7 @@ def _b64json(value: Any) -> str:
 
 
 def safe_member(name: str) -> Optional[PurePosixPath]:
+    """Keep npm scope directories (``@angular/core/...``). Rejects traversal, links are skipped by the caller."""
     name = name.replace("\\", "/")
     if not name or name.startswith("/") or re.match(r"^[A-Za-z]:", name) or "\x00" in name:
         return None
@@ -252,19 +270,11 @@ def find_readme(root: Path) -> str:
     return ""
 
 
-def acquire_slot() -> bool:
-    return _slots.acquire(blocking=False)
-
-
-def release_slot() -> None:
-    _slots.release()
-
-
 class BuildJob:
     """Runs in a worker thread; ``events`` yields dicts until a final ``None``."""
 
     def __init__(self, cfg: Dict[str, Any], archive: Path, workdir: Path, repository: str, tag: str,
-                 dockerfile: str, who: str) -> None:
+                 dockerfile: str, who: str, on_finished: Optional[Any] = None) -> None:
         self.cfg = cfg
         self.archive = archive
         self.workdir = workdir
@@ -277,6 +287,7 @@ class BuildJob:
         self.cancelled = threading.Event()
         self._sock: Optional[socket.socket] = None
         self.readme = ""
+        self.on_finished = on_finished
         self._deadline = time.monotonic() + int(cfg.get("build_timeout_seconds") or 3600)
 
     # -- plumbing ---------------------------------------------------------------
@@ -458,6 +469,12 @@ class BuildJob:
         if status in (200, 404):
             self.emit("log", text=f"Removed the local tag {self.reference}")
 
+    def _fail(self, message: str) -> None:
+        self.emit("error", message=message)
+        notice = airgap_notice(message, self.cfg)
+        if notice:
+            self.emit("log", text=notice)
+
     def run(self) -> None:
         started = time.monotonic()
         built = False
@@ -481,16 +498,21 @@ class BuildJob:
                       digest=pushed.get("digest"), size=pushed.get("size"), seconds=seconds)
             log.info("Docker build %s pushed by %s in %ss (%s)", self.reference, self.who, seconds, pushed.get("digest"))
         except BuildError as exc:
-            self.emit("error", message=str(exc))
+            self._fail(str(exc))
             log.info("Docker build %s by %s failed: %s", self.reference, self.who, exc)
         except Exception as exc:  # noqa: BLE001 - the stream must always end with an event
             log.exception("Docker build %s crashed", self.reference)
-            self.emit("error", message=f"Internal error: {type(exc).__name__}: {exc}"[:500])
+            self._fail(f"Internal error: {type(exc).__name__}: {exc}"[:500])
         finally:
             if built:
                 self._cleanup_image()
             shutil.rmtree(self.workdir, ignore_errors=True)
-            release_slot()
+            callback = self.on_finished
+            if callback is not None:
+                try:
+                    callback()
+                except Exception:  # noqa: BLE001 - a failed release must not hide the build result
+                    log.exception("Docker build slot release failed for %s", self.reference)
             self.events.put(None)
 
 

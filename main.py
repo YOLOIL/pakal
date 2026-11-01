@@ -15,6 +15,13 @@ the `pakal` package:
     pakal/routes_admin.py   /api/admin/*
 """
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Before pakal.config is imported. Existing process variables are left untouched (override=False).
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+
 from pakal.app import app
 from pakal.config import PORT
 

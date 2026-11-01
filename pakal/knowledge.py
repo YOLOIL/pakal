@@ -257,6 +257,24 @@ DEFAULT_PLATFORMS: List[Dict[str, Any]] = [
      "description_en": "Internal package registry: PyPI, npm, Maven, Docker."},
 ]
 
+# Artifact repositories shown on the Repositories tab (admin-editable via the console afterwards).
+# "tech" drives the frontend badge and routing; the "pypi"/"docker" kinds open the built-in browsers.
+REPO_TECHS: List[str] = ["pypi", "npm", "nuget", "powershell", "docker", "maven", "apt", "raw", "other"]
+DEFAULT_REPOSITORIES: List[Dict[str, Any]] = [
+    {"name": "pypi", "tech": "pypi", "icon": "package", "color": "#3775A9",
+     "description_he": "חבילות Python (.whl/.tar.gz).", "description_en": "Python packages (.whl/.tar.gz)."},
+    {"name": "npm", "tech": "npm", "icon": "package", "color": "#CB3837",
+     "description_he": "חבילות Node/JavaScript.", "description_en": "Node/JavaScript packages."},
+    {"name": "nuget", "tech": "nuget", "icon": "package", "color": "#004880",
+     "description_he": "חבילות .NET ו-PowerShell.", "description_en": ".NET and PowerShell packages."},
+    {"name": "docker", "tech": "docker", "icon": "container", "color": "#2496ED",
+     "description_he": "אימג'ים וקונטיינרים ב-Registry.", "description_en": "Container images in the registry."},
+    {"name": "maven", "tech": "maven", "icon": "package", "color": "#C71A36",
+     "description_he": "ארטיפקטים של Java/Maven.", "description_en": "Java/Maven artifacts."},
+    {"name": "apt-focal", "tech": "apt", "icon": "package", "color": "#E95420",
+     "description_he": "חבילות Debian/Ubuntu (apt).", "description_en": "Debian/Ubuntu (apt) packages."},
+]
+
 # Stack glyphs rendered by the frontend icon set.
 STACK_GLYPHS: List[str] = ["code", "server", "chart", "check", "design", "database", "terminal", "package",
                            "shield", "cpu", "globe", "layers"]

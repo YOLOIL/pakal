@@ -21,8 +21,10 @@ from .routes_admin import router as admin_router
 from .docker_build import cleanup_stale_workdirs
 from .routes_auth import router as auth_router
 from .routes_docker import router as docker_router
+from .routes_pypi import router as pypi_router
 from .routes_manage import cleanup_partial_uploads
 from .routes_manage import router as manage_router
+from .routes_manage import upload_installer
 from .routes_public import router as public_router
 from .store import refresh_favicons_async, store
 
@@ -112,7 +114,9 @@ def create_app() -> FastAPI:
     application.include_router(auth_router)
     application.include_router(actions_router)
     application.include_router(manage_router)
+    application.add_api_route("/api/apps/{app_id}/installers", upload_installer, methods=["POST"])
     application.include_router(docker_router)
+    application.include_router(pypi_router)
 
     page_headers = {"Cache-Control": "no-cache"}
 

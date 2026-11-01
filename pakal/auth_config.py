@@ -21,7 +21,7 @@ from .db import get_setting, set_setting
 log = logging.getLogger("pakal.auth")
 
 SECTIONS = ("keycloak", "ldap_server", "ldap_groups", "ldap_lookup", "login_identity", "local_admin", "nexus",
-            "docker")
+            "docker", "powershell")
 SECRET_FIELDS = {"keycloak": "client_secret", "ldap_server": "bind_password", "nexus": "password", "docker": "password"}
 _KEY = "auth.{}"
 _LEGACY_SSO_KEY = "sso_config"
@@ -72,6 +72,13 @@ def env_defaults(section: str) -> Dict[str, Any]:
             "check_existing": config.NEXUS_CHECK_EXISTING,
             "max_upload_mb": config.NEXUS_MAX_UPLOAD_MB,
             "timeout_seconds": config.NEXUS_TIMEOUT_SECONDS,
+        }
+    if section == "powershell":
+        return {
+            "nuget_exe_path": config.NUGET_EXE_PATH,
+            "repository_name": config.PS_REPOSITORY_NAME,
+            "repository_url": config.PS_REPOSITORY_URL,
+            "powershell7_url": config.POWERSHELL7_URL,
         }
     if section == "docker":
         return {

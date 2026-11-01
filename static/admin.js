@@ -3,7 +3,9 @@
 
   const { esc, icon, appIcon, toast, debounce } = window.PAKAL;
   const CSRF_HEADERS = { "X-PAKAL-Request": "1" };
-  const VIEWS = ["overview", "apps", "stacks", "platforms", "feedback", "sso", "nexus", "interface"];
+  const VIEWS = ["overview", "apps", "stacks", "platforms", "repos", "actions", "feedback", "sso", "nexus", "interface"];
+  // Inline glyphs (from common.js ICONS) offered in the repository/action editors.
+  const GLYPH_CHOICES = ["package", "container", "code", "database", "server", "terminal", "globe", "layers", "hdd", "tag", "shield", "book", "settings", "upload", "download", "sliders", "tools", "external"];
   const FB_STATUSES = ["new", "in_progress", "closed"];
   const FB_CATEGORIES = ["suggestion", "bug", "app_request"];
   const FB_ICONS = { suggestion: "lightbulb", bug: "bug", app_request: "package" };
@@ -50,6 +52,7 @@
       featured: "כלי מרכזי", featuredYes: "כן", featuredNo: "לא", descriptionHe: "תיאור (עברית)", descriptionEn: "תיאור (English)",
       tags: "תגיות", tagsHint: "מופרדות בפסיקים. השאירו ריק לשימוש בתגיות האוטומטיות.",
       hideApp: "הסתר תוכנה זו מהפורטל", installersVisibility: "מתקינים המוצגים בפורטל",
+      visShown: "👁️ מוצג בפורטל", visHidden: "🙈 מוסתר",
       installersHint: "בטלו סימון כדי להסתיר קבצים פנימיים או לא רלוונטיים.",
       icon: "אייקון", upload: "העלאת אייקון", removeUpload: "הסרת אייקון מותאם", fetchFavicon: "משיכת Favicon",
       iconSource: (s) => `מקור: ${s}`, srcUpload: "הועלה ידנית", srcExe: "חולץ מקובץ ה-EXE", srcFolder: "קובץ בתיקיית התוכנה",
@@ -67,8 +70,25 @@
       moveUp: "העבר למעלה", moveDown: "העבר למטה", tools: (n) => (n === 1 ? "כלי אחד" : `${n} כלים`),
       missing: (n) => `${n} חסרים`, noStacks: "טרם הוגדרו ערכות.", delete: "מחיקה", deleted: "נמחק",
       confirmDeleteStack: "למחוק את הערכה?", confirmDeletePlatform: "למחוק את הפלטפורמה?",
+      confirmDeleteRepo: "למחוק את המאגר?", confirmDeleteAction: "למחוק את הפעולה?",
       confirmDeleteText: "הפעולה אינה הפיכה.",
       platformsSubtitle: "קישורים למערכות הליבה ברשת הפיתוח. אייקונים נמשכים אוטומטית מה-Favicon של כל אתר.",
+      navRepos: "מאגרים", navActions: "פעולות",
+      reposSubtitle: "מאגרי הארטיפקטים ב-Nexus המוצגים בלשונית 'מאגרים'.",
+      newRepo: "מאגר חדש", editRepo: "עריכת מאגר", noRepos: "טרם הוגדרו מאגרים.",
+      repoTech: "סוג / טכנולוגיה", repoUrl: "כתובת Nexus", repoUrlHint: "כתובת לדפדוף במאגר. עבור PyPI/Docker נפתח הדפדפן המובנה.",
+      repoNoUrl: "אין כתובת",
+      repoTech_pypi: "PyPI", repoTech_npm: "npm", repoTech_nuget: "NuGet", repoTech_powershell: "PowerShell",
+      repoTech_docker: "Docker", repoTech_maven: "Maven", repoTech_apt: "APT", repoTech_raw: "Raw", repoTech_other: "אחר",
+      actionsSubtitle: "הכרטיסים בלשונית 'פעולות'. הכלים המובנים נשארים בקוד; ניתן להוסיף קישורים והורדות.",
+      newAction: "פעולה חדשה", editAction: "עריכת פעולה", noActions: "אין פעולות.",
+      actKind: "סוג", actState: "מצב", actOn: "מוצג", actOff: "מוסתר",
+      actKindLink: "קישור", actKindDownload: "הורדה", actKindBuiltin: "כלי מובנה",
+      actTarget: "יעד (URL / נתיב)", actTargetHint: "כתובת http(s) או נתיב יחסי בטוח כמו /api/tools/setup.cmd.",
+      actChips: "תגיות (מופרדות בפסיק)", actChipsHint: "עד 8 תגיות קצרות המוצגות על הכרטיס.",
+      actEnabled: "מופעל", actEnglish: "כרטיס באנגלית",
+      actBuiltinNote: "זהו כלי מובנה. ההתנהגות נשמרת בקוד; ניתן לערוך רק שם, תיאור, אייקון, תגיות וסדר.",
+      actBuiltinNexus: "העלאה ל-Nexus", actBuiltinPowershell: "הגדרת PowerShell", actBuiltinDocker: "בניית Docker Image",
       newPlatform: "פלטפורמה חדשה", editPlatform: "עריכת פלטפורמה", name: "שם", url: "כתובת URL",
       builtinIcon: "אייקון מובנה (גיבוי)", uploadAfterSave: "ניתן להעלות אייקון לאחר השמירה הראשונה.",
       noPlatforms: "טרם הוגדרו פלטפורמות.", requestFailed: "הבקשה נכשלה",
@@ -120,8 +140,8 @@
       pwFromDb: "הסיסמה הנוכחית נשמרה בממשק", pwFromEnv: "הסיסמה הנוכחית מגיעה ממשתני הסביבה",
       localAdminNote: "החשבון המקומי נבדק לפני LDAP ולכן ממשיך לעבוד גם כאשר שרתי ה-AD או Keycloak אינם זמינים.",
       pwMismatch: "הסיסמאות אינן תואמות", pwTooShort: "לפחות 8 תווים", optional: "רשות", secretNotSet: "לא הוגדר",
-      secretStored: "••••••••  (נשמר - השאירו ריק כדי לא לשנות)", clearSecret: "מחיקת הערך השמור",
-      msUnit: "ms", secondsUnit: "שניות", defaultValue: (v) => `ברירת מחדל: ${v}`,
+      secretStored: "נשמר. השאירו את השדה ריק כדי לא לשנות.", secretPlaceholder: "••••••••", clearSecret: "מחיקת הערך השמור",
+      msUnit: "ms", secondsUnit: "שניות", defaultLead: "ברירת מחדל:", defaultValue: (v) => `ברירת מחדל: ${v}`,
       saveSection: "שמירת תת-סעיף זה", savingSection: "שומר…", sectionSaved: (time) => `נשמר בהצלחה · ${time}`,
       sectionSavedToast: (name) => `"${name}" נשמר`, fixErrors: "יש לתקן את השדות המסומנים",
       confirmSectionReset: (name) => `לשחזר את "${name}" לברירות המחדל?`,
@@ -143,6 +163,11 @@
       srcMsi: "חולץ מקובץ ה-MSI", msiIconExtraction: "חילוץ אייקונים מ-MSI",
       navNexus: "הגדרות Nexus", nexusSubtitle: "חיבור ה-Portal ל-Sonatype Nexus עבור מעלה החבילות בלשונית \"פעולות\". הערכים נשמרים במסד הנתונים של המערכת וחלים מיד - ללא שינוי קוד או הפעלה מחדש.",
       card_nexus: "הגדרות Nexus", card_nexus_sub: "כתובת השרת, חשבון השירות ושמות מאגרי היעד לכל סוג חבילה.",
+      card_powershell: "הגדרת PowerShell 7", card_powershell_sub: "נתיב nuget.exe וכתובת מאגר PowerShell לכרטיס ההתקנה בפורטל.",
+      f_powershell_nuget_exe_path: "נתיב nuget.exe", h_powershell_nuget_exe_path: "נתיב UNC בשיתוף הרשת. ברירת המחדל \\\\na-nas-01\\support$\\Applications\\nuget\\nuget.exe",
+      f_powershell_repository_name: "שם המאגר", h_powershell_repository_name: "השם שנרשם ב-Register-PSRepository. ברירת המחדל NexusPS.",
+      f_powershell_repository_url: "כתובת המאגר", h_powershell_repository_url: "השאירו ריק כדי להרכיב אותה מכתובת Nexus ומהמאגר הראשון של PowerShell.",
+      f_powershell_powershell7_url: "קישור להורדת PowerShell 7", h_powershell_powershell7_url: "אופציונלי. כפתור נוסף לצד החיפוש במאגר התוכנות.",
       f_nexus_enabled: "הפעלת מעלה החבילות", h_nexus_enabled: "כאשר כבוי, לשונית \"פעולות\" מציגה הודעה והעלאות נחסמות.",
       f_nexus_tls_insecure: "דילוג על אימות תעודת TLS", h_nexus_tls_insecure: "לשרתים עם תעודה פנימית שאינה מוכרת בקונטיינר.",
       f_nexus_check_existing: "בדיקת קיום לפני העלאה", h_nexus_check_existing: "מחפש את החבילה והגרסה ב-Nexus ומסמן \"קיים\" בלי לשלוח את הקובץ.",
@@ -160,7 +185,7 @@
       card_docker: "Docker Registry", card_docker_sub: "ה-Registry של Nexus לקטלוג ה-Docker ולבניית אימג'ים מ-ZIP בלשונית הפעולות.",
       f_docker_enabled: "הפעלת קטלוג ה-Docker", h_docker_enabled: "כאשר כבוי, לשונית Docker מציגה הודעה ובנייה נחסמת.",
       f_docker_build_enabled: "בניית אימג'ים מ-ZIP", h_docker_build_enabled: "בנייה ודחיפה דרך מנוע ה-Docker של השרת (/var/run/docker.sock).",
-      f_docker_build_admin_only: "בנייה למנהלים בלבד", h_docker_build_admin_only: "מומלץ: גישה ל-Docker socket שקולה להרשאות root בשרת. כשכבוי - כל משתמש מחובר יכול לבנות.",
+      f_docker_build_admin_only: "בנייה למנהלים בלבד", h_docker_build_admin_only: "לא בתוקף: כל משתמש מחובר יכול לבנות תמונה.",
       f_docker_tls_insecure: "דילוג על אימות תעודת TLS", h_docker_tls_insecure: "לקריאות הקטלוג בלבד. מנוע ה-Docker צריך לסמוך על ה-Registry בעצמו (insecure-registries / תעודת CA).",
       f_docker_registry: "כתובת ה-Registry", h_docker_registry: "host:port של ה-Docker connector ב-Nexus, כפי שמופיע ב-docker pull. אפשר להקדים http:// ל-Registry ללא TLS.",
       f_docker_username: "חשבון שירות", h_docker_username: "ריק = שימוש בחשבון ה-Nexus שלמעלה. נדרשות הרשאות read ו-add/edit על מאגר ה-Docker.",
@@ -172,13 +197,17 @@
       dockerRepos: "אימג'ים ב-Registry", dockerEngine: "מנוע Docker (לבנייה)",
       navInterface: "תצוגת הפורטל", interfaceSubtitle: "הצגה או הסתרה של לשוניות, כפתורים ופעולות בפורטל. השינוי חל מיד על כל המשתמשים.",
       uiGroup_tabs: "לשוניות ניווט", uiGroup_header: "סרגל עליון", uiGroup_content: "פעולות בתוכן",
+      uiGroup_onboarding: "קליטה והדרכה",
       uiGroupSub_tabs: "לשונית מוסתרת נעלמת מהתפריט, והכניסה אליה בקישור ישיר מחזירה לדף הבית.",
       uiGroupSub_header: "כפתורים בסרגל העליון ובפינת המסך.",
       uiGroupSub_content: "כפתורים בכרטיסים, בחלונות הפרטים ובמעלה החבילות.",
+      uiGroupSub_onboarding: "המדריך והסיור המודרך למשתמשים חדשים.",
+      ui_guide: "מדריך מהיר וסיור", uid_guide: "תיבת המדריך בדף הבית, כפתור ה-❓ והסיור המודרך שנפתח אוטומטית. כשהוא מוסתר - אף אחד מהם לא מוצג.",
       ui_tab_bundles: "לשונית \"ערכות לפי תפקיד\"", uid_tab_bundles: "כולל את אזור הערכות בדף הבית.",
       ui_tab_platforms: "לשונית \"פלטפורמות\"", uid_tab_platforms: "קישורי המערכות הפנימיות.",
       ui_tab_actions: "לשונית \"פעולות\"", uid_tab_actions: "מעלה החבילות ל-Nexus. כשהיא מוסתרת גם ה-API חוסם העלאות.",
       ui_tab_docker: "לשונית \"Docker\"", uid_tab_docker: "קטלוג האימג'ים מה-Registry. כשהיא מוסתרת גם ה-API של הקטלוג נחסם.",
+      ui_tab_pypi: "לשונית \"מאגר PyPI\"", uid_tab_pypi: "קטלוג החבילות מ-Nexus. כשהיא מוסתרת גם ה-API של הקטלוג נחסם.",
       ui_docker_build: "בניית אימג' מ-ZIP", uid_docker_build: "הכרטיס בלשונית הפעולות. כשהוא מוסתר גם הבנייה בשרת נחסמת.",
       ui_btn_sync: "מחוון הסנכרון", uid_btn_sync: "שעת הסריקה האחרונה ורענון הקטלוג.",
       ui_btn_language: "בורר שפה", uid_btn_language: "מעבר בין עברית לאנגלית.",
@@ -239,6 +268,7 @@
       featured: "Core tool", featuredYes: "Yes", featuredNo: "No", descriptionHe: "Description (Hebrew)", descriptionEn: "Description (English)",
       tags: "Tags", tagsHint: "Comma separated. Leave empty to use the automatic tags.",
       hideApp: "Hide this application from the portal", installersVisibility: "Installers shown in the portal",
+      visShown: "👁️ Shown in the portal", visHidden: "🙈 Hidden",
       installersHint: "Uncheck to hide internal or irrelevant files.",
       icon: "Icon", upload: "Upload icon", removeUpload: "Remove custom icon", fetchFavicon: "Fetch favicon",
       iconSource: (s) => `Source: ${s}`, srcUpload: "Uploaded", srcExe: "Extracted from the EXE", srcFolder: "File in the app folder",
@@ -256,8 +286,25 @@
       moveUp: "Move up", moveDown: "Move down", tools: (n) => (n === 1 ? "1 tool" : `${n} tools`),
       missing: (n) => `${n} missing`, noStacks: "No stacks defined yet.", delete: "Delete", deleted: "Deleted",
       confirmDeleteStack: "Delete this stack?", confirmDeletePlatform: "Delete this platform?",
+      confirmDeleteRepo: "Delete this repository?", confirmDeleteAction: "Delete this action?",
       confirmDeleteText: "This action cannot be undone.",
       platformsSubtitle: "Links to the core systems of the development network. Icons are fetched automatically from each site's favicon.",
+      navRepos: "Repositories", navActions: "Actions",
+      reposSubtitle: "Nexus artifact repositories shown on the Repositories tab.",
+      newRepo: "New repository", editRepo: "Edit repository", noRepos: "No repositories defined yet.",
+      repoTech: "Type / technology", repoUrl: "Nexus URL", repoUrlHint: "Browse URL for the repo. PyPI/Docker open the built-in browser instead.",
+      repoNoUrl: "No URL",
+      repoTech_pypi: "PyPI", repoTech_npm: "npm", repoTech_nuget: "NuGet", repoTech_powershell: "PowerShell",
+      repoTech_docker: "Docker", repoTech_maven: "Maven", repoTech_apt: "APT", repoTech_raw: "Raw", repoTech_other: "Other",
+      actionsSubtitle: "Cards on the Actions tab. Built-in tools stay in code; you can add link and download actions.",
+      newAction: "New action", editAction: "Edit action", noActions: "No actions.",
+      actKind: "Kind", actState: "State", actOn: "Shown", actOff: "Hidden",
+      actKindLink: "Link", actKindDownload: "Download", actKindBuiltin: "Built-in tool",
+      actTarget: "Target (URL / path)", actTargetHint: "An http(s) URL or a safe root-relative path like /api/tools/setup.cmd.",
+      actChips: "Chips (comma-separated)", actChipsHint: "Up to 8 short tags shown on the card.",
+      actEnabled: "Enabled", actEnglish: "English card",
+      actBuiltinNote: "This is a built-in tool. Its behaviour stays in code; only the name, description, icon, chips and order are editable.",
+      actBuiltinNexus: "Nexus upload", actBuiltinPowershell: "PowerShell setup", actBuiltinDocker: "Docker Image Builder",
       newPlatform: "New platform", editPlatform: "Edit platform", name: "Name", url: "URL",
       builtinIcon: "Built-in icon (fallback)", uploadAfterSave: "You can upload an icon after the first save.",
       noPlatforms: "No platforms defined yet.", requestFailed: "Request failed",
@@ -309,8 +356,8 @@
       pwFromDb: "Current password was set in the console", pwFromEnv: "Current password comes from the environment",
       localAdminNote: "The local account is checked before LDAP, so it keeps working when AD or Keycloak are unreachable.",
       pwMismatch: "Passwords do not match", pwTooShort: "At least 8 characters", optional: "optional", secretNotSet: "Not set",
-      secretStored: "••••••••  (stored - leave empty to keep)", clearSecret: "Delete the stored value",
-      msUnit: "ms", secondsUnit: "seconds", defaultValue: (v) => `Default: ${v}`,
+      secretStored: "Stored. Leave the field empty to keep the current value.", secretPlaceholder: "••••••••", clearSecret: "Delete the stored value",
+      msUnit: "ms", secondsUnit: "seconds", defaultLead: "Default:", defaultValue: (v) => `Default: ${v}`,
       saveSection: "Save this subsection", savingSection: "Saving…", sectionSaved: (time) => `Saved · ${time}`,
       sectionSavedToast: (name) => `"${name}" saved`, fixErrors: "Fix the highlighted fields",
       confirmSectionReset: (name) => `Restore "${name}" to its defaults?`,
@@ -332,6 +379,11 @@
       srcMsi: "Extracted from the MSI", msiIconExtraction: "MSI icon extraction",
       navNexus: "Nexus Configuration", nexusSubtitle: "Connects the portal to Sonatype Nexus for the package uploader in the Actions tab. Values are stored in the portal database and apply immediately - no code change or restart.",
       card_nexus: "Nexus Configuration", card_nexus_sub: "Server address, service account and target repository names per package type.",
+      card_powershell: "PowerShell 7 setup", card_powershell_sub: "nuget.exe share path and the PowerShell gallery URL used by the portal setup card.",
+      f_powershell_nuget_exe_path: "nuget.exe path", h_powershell_nuget_exe_path: "UNC path on the network share. Default \\\\na-nas-01\\support$\\Applications\\nuget\\nuget.exe",
+      f_powershell_repository_name: "Repository name", h_powershell_repository_name: "Name passed to Register-PSRepository. NexusPS by default.",
+      f_powershell_repository_url: "Repository URL", h_powershell_repository_url: "Leave empty to build it from the Nexus address and the first PowerShell repository.",
+      f_powershell_powershell7_url: "PowerShell 7 download link", h_powershell_powershell7_url: "Optional extra link beside the software-repository search.",
       f_nexus_enabled: "Enable the package uploader", h_nexus_enabled: "When off, the Actions tab shows a notice and uploads are rejected.",
       f_nexus_tls_insecure: "Skip TLS certificate verification", h_nexus_tls_insecure: "For servers with an internal certificate the container does not trust.",
       f_nexus_check_existing: "Check before uploading", h_nexus_check_existing: "Searches Nexus for the package and version and marks it \"Already exists\" without sending the file.",
@@ -349,7 +401,7 @@
       card_docker: "Docker Registry", card_docker_sub: "The Nexus registry behind the Docker catalog and the ZIP-to-image builds on the Actions tab.",
       f_docker_enabled: "Enable the Docker catalog", h_docker_enabled: "When off, the Docker tab shows a notice and builds are rejected.",
       f_docker_build_enabled: "Build images from ZIP", h_docker_build_enabled: "Builds and pushes through the server's Docker engine (/var/run/docker.sock).",
-      f_docker_build_admin_only: "Admins only", h_docker_build_admin_only: "Recommended: Docker socket access is equivalent to root on the host. When off, any signed-in user can build.",
+      f_docker_build_admin_only: "Admins only", h_docker_build_admin_only: "No longer applied: every signed-in user can build an image.",
       f_docker_tls_insecure: "Skip TLS certificate verification", h_docker_tls_insecure: "For catalog reads only. The Docker engine must trust the registry itself (insecure-registries / CA certificate).",
       f_docker_registry: "Registry address", h_docker_registry: "host:port of the Nexus Docker connector, as used in docker pull. Prefix http:// for a registry without TLS.",
       f_docker_username: "Service account", h_docker_username: "Empty = use the Nexus account above. Needs read and add/edit on the Docker repository.",
@@ -361,13 +413,17 @@
       dockerRepos: "Images in the registry", dockerEngine: "Docker engine (for builds)",
       navInterface: "Portal interface", interfaceSubtitle: "Show or hide tabs, buttons and actions in the portal. Changes apply immediately to every user.",
       uiGroup_tabs: "Navigation tabs", uiGroup_header: "Header", uiGroup_content: "Content actions",
+      uiGroup_onboarding: "Onboarding & help",
       uiGroupSub_tabs: "A hidden tab disappears from the menu, and direct links to it fall back to the home page.",
       uiGroupSub_header: "Buttons in the top bar and the screen corner.",
       uiGroupSub_content: "Buttons on cards, in detail dialogs and in the package uploader.",
+      uiGroupSub_onboarding: "The guide and guided tour for new users.",
+      ui_guide: "Quick guide & tour", uid_guide: "The home-page guide box, the ❓ button and the auto-start guided tour. When hidden, none of them appear.",
       ui_tab_bundles: "\"Developer Stacks\" tab", uid_tab_bundles: "Includes the stacks section on the home page.",
       ui_tab_platforms: "\"Platforms\" tab", uid_tab_platforms: "Links to the internal platforms.",
       ui_tab_actions: "\"Actions\" tab", uid_tab_actions: "The Nexus package uploader. When hidden, the API rejects uploads too.",
       ui_tab_docker: "\"Docker\" tab", uid_tab_docker: "The registry image catalog. When hidden, the catalog API is blocked too.",
+      ui_tab_pypi: "\"PyPI Catalog\" tab", uid_tab_pypi: "The Nexus Python package catalog. When hidden, the catalog API is blocked too.",
       ui_docker_build: "ZIP to Docker image", uid_docker_build: "The card on the Actions tab. When hidden, server-side builds are blocked too.",
       ui_btn_sync: "Sync indicator", uid_btn_sync: "Last scan time and catalog refresh.",
       ui_btn_language: "Language switch", uid_btn_language: "Toggles Hebrew and English.",
@@ -402,6 +458,8 @@
     apps: [],
     stacks: [],
     platforms: [],
+    repos: [],
+    actions: [],
     options: { builtin_icons: [], stack_glyphs: [], categories: [] },
     appSearch: "",
     appFilter: "all",
@@ -555,13 +613,14 @@
 
   async function loadAll() {
     try {
-      const [options, overview, apps, stacks, platforms, feedback, auth, ui, announcement] = await Promise.all([
+      const [options, overview, apps, stacks, platforms, repos, actions, feedback, auth, ui, announcement] = await Promise.all([
         api("GET", "/api/admin/options"), api("GET", "/api/admin/overview"), api("GET", "/api/admin/apps"),
-        api("GET", "/api/admin/stacks"), api("GET", "/api/admin/platforms"), api("GET", "/api/admin/feedback"),
+        api("GET", "/api/admin/stacks"), api("GET", "/api/admin/platforms"), api("GET", "/api/admin/repositories"),
+        api("GET", "/api/admin/actions"), api("GET", "/api/admin/feedback"),
         api("GET", "/api/admin/auth"), api("GET", "/api/admin/ui"), api("GET", "/api/admin/announcement"),
       ]);
       Object.assign(state, {
-        options, overview, apps, stacks, platforms, feedback, auth, ui, uiDraft: { ...ui.visibility },
+        options, overview, apps, stacks, platforms, repos, actions, feedback, auth, ui, uiDraft: { ...ui.visibility },
         announcement, annDraft: { ...announcement },
       });
       state.scanning = Boolean(overview.scan.scanning);
@@ -575,6 +634,7 @@
   async function reload(...keys) {
     const urls = {
       overview: "/api/admin/overview", apps: "/api/admin/apps", stacks: "/api/admin/stacks", platforms: "/api/admin/platforms",
+      repos: "/api/admin/repositories", actions: "/api/admin/actions",
       feedback: "/api/admin/feedback", auth: "/api/admin/auth",
     };
     const results = await Promise.all(keys.map((k) => api("GET", urls[k])));
@@ -589,6 +649,8 @@
     $("#count-apps").textContent = state.apps.length || "";
     $("#count-stacks").textContent = state.stacks.length || "";
     $("#count-platforms").textContent = state.platforms.length || "";
+    $("#count-repos").textContent = state.repos.length || "";
+    $("#count-actions").textContent = state.actions.length || "";
     const newFeedback = state.feedback.counts.new || 0;
     $("#count-feedback").hidden = !newFeedback;
     $("#count-feedback").textContent = newFeedback;
@@ -602,6 +664,7 @@
     const main = $("#admin-main");
     const renderers = {
       overview: renderOverview, apps: renderApps, stacks: renderStacks, platforms: renderPlatforms,
+      repos: renderRepositories, actions: renderActions,
       feedback: renderFeedback, sso: renderSso, nexus: renderNexus, interface: renderInterface,
     };
     main.innerHTML = (renderers[state.view] || renderOverview)();
@@ -775,6 +838,72 @@
       </div>`;
   }
 
+  // ------------------------------------------------------------ repositories
+
+  function repoTechLabel(tech) {
+    return t(`repoTech_${tech}`) || tech;
+  }
+
+  function renderRepositories() {
+    const rows = state.repos.map((r) => `
+      <tr class="clickable" data-action="edit-repo" data-id="${r.id}">
+        <td><div class="row-main"><span class="repo-chip" style="--repo-color:${esc(r.color)}">${icon(r.icon || "package")}</span><div style="min-width:0"><div class="row-title">${esc(r.name)}</div><div class="row-sub">${esc(r.url) || `<span class="muted">${esc(t("repoNoUrl"))}</span>`}</div></div></div></td>
+        <td><span class="pill">${esc(repoTechLabel(r.tech))}</span></td>
+        <td class="muted">${esc(loc(r, "description"))}</td>
+        <td class="num">${esc(r.sort_order)}</td>
+        <td class="actions-cell"><span class="cell-actions">
+          <button class="icon-btn icon-btn-sm" type="button" data-action="delete-repo" data-id="${r.id}" title="${esc(t("delete"))}" aria-label="${esc(t("delete"))}">${icon("trash")}</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-action="edit-repo" data-id="${r.id}">${icon("edit")}<span>${esc(t("edit"))}</span></button>
+        </span></td>
+      </tr>`).join("");
+    return `
+      ${pageHead(t("navRepos"), t("reposSubtitle"), `<button class="btn btn-primary" type="button" data-action="new-repo">${icon("plus")}<span>${esc(t("newRepo"))}</span></button>`)}
+      <div class="table-wrap card">
+        <table class="table">
+          <thead><tr><th>${esc(t("name"))}</th><th>${esc(t("repoTech"))}</th><th>${esc(t("colDescription"))}</th><th>${esc(t("colOrder"))}</th><th></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="5" class="muted center">${esc(t("noRepos"))}</td></tr>`}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // --------------------------------------------------------------- actions
+
+  function actionKindLabel(a) {
+    if (a.builtin) return t("actKindBuiltin");
+    return a.kind === "download" ? t("actKindDownload") : t("actKindLink");
+  }
+
+  function actionDisplayName(a) {
+    const name = loc(a, "name");
+    if (name) return name;
+    if (a.builtin === "nexus") return t("actBuiltinNexus");
+    if (a.builtin === "powershell") return t("actBuiltinPowershell");
+    if (a.builtin === "docker") return t("actBuiltinDocker");
+    return a.key;
+  }
+
+  function renderActions() {
+    const rows = state.actions.map((a) => `
+      <tr class="clickable${a.enabled ? "" : " is-dim"}" data-action="edit-action" data-id="${esc(a.key)}">
+        <td><div class="row-main"><span class="repo-chip">${icon(a.icon || "sliders")}</span><div style="min-width:0"><div class="row-title">${esc(actionDisplayName(a))}</div><div class="row-sub">${esc(loc(a, "description"))}</div></div></div></td>
+        <td><span class="pill${a.builtin ? " pill-accent" : ""}">${esc(actionKindLabel(a))}</span></td>
+        <td class="subtle">${a.enabled ? esc(t("actOn")) : esc(t("actOff"))}</td>
+        <td class="num">${esc(a.sort_order)}</td>
+        <td class="actions-cell"><span class="cell-actions">
+          ${a.builtin ? "" : `<button class="icon-btn icon-btn-sm" type="button" data-action="delete-action" data-id="${esc(a.key)}" title="${esc(t("delete"))}" aria-label="${esc(t("delete"))}">${icon("trash")}</button>`}
+          <button class="btn btn-ghost btn-sm" type="button" data-action="edit-action" data-id="${esc(a.key)}">${icon("edit")}<span>${esc(t("edit"))}</span></button>
+        </span></td>
+      </tr>`).join("");
+    return `
+      ${pageHead(t("navActions"), t("actionsSubtitle"), `<button class="btn btn-primary" type="button" data-action="new-action">${icon("plus")}<span>${esc(t("newAction"))}</span></button>`)}
+      <div class="table-wrap card">
+        <table class="table">
+          <thead><tr><th>${esc(t("name"))}</th><th>${esc(t("actKind"))}</th><th>${esc(t("actState"))}</th><th>${esc(t("colOrder"))}</th><th></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="5" class="muted center">${esc(t("noActions"))}</td></tr>`}</tbody>
+        </table>
+      </div>`;
+  }
+
   // -------------------------------------------------------------- feedback
 
   const fmtDateTime = (iso) => (iso
@@ -933,7 +1062,6 @@
     fields: [
       { k: "enabled", type: "toggle" },
       { k: "build_enabled", env: "DOCKER_BUILD_ENABLED", type: "toggle" },
-      { k: "build_admin_only", env: "DOCKER_BUILD_ADMIN_ONLY", type: "toggle" },
       { k: "tls_insecure", env: "NEXUS_TLS_INSECURE", type: "toggle" },
       { k: "registry", env: "NEXUS_DOCKER_REGISTRY", placeholder: "nexus.example.com:5000", wide: true },
       { k: "username", env: "NEXUS_DOCKER_USERNAME", optional: true, placeholder: "svc_account" },
@@ -943,7 +1071,16 @@
       { k: "build_timeout_seconds", env: "DOCKER_BUILD_TIMEOUT_SECONDS", type: "number", min: 60, max: 86400, step: 60, unit: "sec" },
     ],
   };
-  const ALL_CARDS = [...AUTH_CARDS, NEXUS_CARD, DOCKER_CARD];
+  const POWERSHELL_CARD = {
+    section: "powershell", icon: "terminal",
+    fields: [
+      { k: "nuget_exe_path", env: "NUGET_EXE_PATH", placeholder: "\\\\na-nas-01\\support$\\Applications\\nuget\\nuget.exe", wide: true },
+      { k: "repository_name", env: "PS_REPOSITORY_NAME", placeholder: "NexusPS" },
+      { k: "repository_url", env: "PS_REPOSITORY_URL", type: "url", optional: true, placeholder: "https://nexus.example.com/repository/powershell", wide: true },
+      { k: "powershell7_url", env: "POWERSHELL7_URL", type: "url", optional: true, placeholder: "https://files.example.com/powershell/", wide: true },
+    ],
+  };
+  const ALL_CARDS = [...AUTH_CARDS, NEXUS_CARD, DOCKER_CARD, POWERSHELL_CARD];
   const UNIT_LABELS = { ms: "msUnit", sec: "secondsUnit", mb: "mbUnit" };
 
   const authLabel = (section, k) => t(`f_${section}_${k}`);
@@ -952,53 +1089,60 @@
     return typeof value === "function" ? value() : value || "";
   };
 
-  function authValueHint(card, f, value) {
+  function authDefault(card, f, value) {
     const def = state.auth.defaults[card.section][f.k];
     if (f.type === "toggle" || f.type === "secret" || f.type === "new-password" || f.type === "confirm") return "";
     if (def === undefined || def === "" || String(def) === String(value ?? "")) return "";
-    return t("defaultValue", def);
+    return String(def);
   }
 
   function authField(card, f) {
     const s = state.auth.sections[card.section];
     const value = s[f.k];
     const name = `${card.section}.${f.k}`;
+    const inputId = `auth-${card.section}-${f.k}`;
     const envBadge = f.env ? `<code class="env-key" dir="ltr">${esc(f.env)}</code>` : "";
     const optional = f.optional ? `<span class="opt-tag">${esc(t("optional"))}</span>` : "";
-    const hint = [authHint(card.section, f.k), authValueHint(card, f, value)].filter(Boolean);
-    const hintHtml = hint.length ? `<span class="hint">${hint.map(esc).join(" · ")}</span>` : "";
+    const notes = [];
+    const prose = authHint(card.section, f.k);
+    if (prose) notes.push(esc(prose));
+    if ((f.type === "secret" && s[`has_${f.k}`]) || (f.type === "new-password" && s.has_password)) notes.push(esc(t("secretStored")));
+    if (f.type === "new-password") notes.push(esc(s.password_source === "database" ? t("pwFromDb") : t("pwFromEnv")));
+    const fallback = authDefault(card, f, value);
+    if (fallback) notes.push(`${esc(t("defaultLead"))} <bdi dir="ltr">${esc(fallback)}</bdi>`);
+    const hintHtml = notes.length ? `<span class="form-hint">${notes.join("<br>")}</span>` : "";
     const err = `<span class="field-error" data-error-for="${esc(f.k)}"></span>`;
-    const head = `<span class="auth-label"><span>${esc(authLabel(card.section, f.k))}</span>${optional}${envBadge}</span>`;
+    const head = `<label class="auth-label" for="${esc(inputId)}"><span>${esc(authLabel(card.section, f.k))}</span>${optional}${envBadge}</label>`;
 
     if (f.type === "toggle") {
       return `
-        <label class="switch-row auth-toggle wide">
-          <span class="switch"><input type="checkbox" name="${esc(f.k)}"${value ? " checked" : ""}><span class="switch-track"></span></span>
-          <span class="switch-text">${head}${hintHtml}</span>
-        </label>`;
+        <div class="form-group auth-field auth-toggle wide">
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="${esc(inputId)}" name="${esc(f.k)}"${value ? " checked" : ""}><span class="switch-track"></span></span>
+            <span class="switch-text"><span class="auth-label"><span>${esc(authLabel(card.section, f.k))}</span>${optional}${envBadge}</span>${hintHtml}</span>
+          </label>
+        </div>`;
     }
     let control;
     if (f.type === "secret") {
       const has = s[`has_${f.k}`];
       control = `
-        <input class="input mono" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password" spellcheck="false"
-          placeholder="${esc(has ? t("secretStored") : t("secretNotSet"))}">
+        <input class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password" spellcheck="false"
+          placeholder="${esc(has ? t("secretPlaceholder") : t("secretNotSet"))}">
         ${has ? `<label class="check"><input type="checkbox" name="clear_${esc(f.k)}"><span>${esc(t("clearSecret"))}</span></label>` : ""}`;
     } else if (f.type === "new-password") {
-      control = `<input class="input mono" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password" minlength="8"
-          placeholder="${esc(s.has_password ? t("secretStored") : t("secretNotSet"))}">`;
-      hint.unshift(s.password_source === "database" ? t("pwFromDb") : t("pwFromEnv"));
+      control = `<input class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password" minlength="8"
+          placeholder="${esc(s.has_password ? t("secretPlaceholder") : t("secretNotSet"))}">`;
     } else if (f.type === "confirm") {
-      control = `<input class="input mono" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password">`;
+      control = `<input class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" type="password" dir="ltr" autocomplete="new-password">`;
     } else if (f.type === "select") {
-      control = `<select class="input mono" name="${esc(f.k)}" dir="ltr">${f.options.map((o) => `<option value="${esc(o)}"${o === (value || "") ? " selected" : ""}>${esc(o || t("promptDefault"))}</option>`).join("")}</select>`;
+      control = `<select class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" dir="ltr">${f.options.map((o) => `<option value="${esc(o)}"${o === (value || "") ? " selected" : ""}>${esc(o || t("promptDefault"))}</option>`).join("")}</select>`;
     } else if (f.type === "number") {
-      control = `<span class="input-suffix" dir="ltr"><input class="input mono" name="${esc(f.k)}" type="number" inputmode="numeric" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(value ?? "")}"><span class="suffix">${esc(t(UNIT_LABELS[f.unit] || "secondsUnit"))}</span></span>`;
+      control = `<span class="input-suffix" dir="ltr"><input class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" type="number" dir="ltr" inputmode="numeric" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(value ?? "")}"><span class="suffix" dir="ltr">${esc(t(UNIT_LABELS[f.unit] || "secondsUnit"))}</span></span>`;
     } else {
-      control = `<input class="input mono" name="${esc(f.k)}" type="${f.type === "url" ? "url" : "text"}" dir="ltr" autocomplete="off" spellcheck="false" value="${esc(value ?? "")}"${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}>`;
+      control = `<input class="input mono ltr-input" id="${esc(inputId)}" name="${esc(f.k)}" type="${f.type === "url" ? "url" : "text"}" dir="ltr" autocomplete="off" spellcheck="false" value="${esc(value ?? "")}"${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}>`;
     }
-    const finalHint = hint.length ? `<span class="hint">${hint.map(esc).join(" · ")}</span>` : "";
-    return `<div class="field auth-field${f.wide ? " wide" : ""}" data-field="${esc(name)}">${head}${control}${finalHint}${err}</div>`;
+    return `<div class="form-group auth-field${f.wide ? " wide" : ""}" data-field="${esc(name)}">${head}${control}${hintHtml}${err}</div>`;
   }
 
   function keycloakExtras() {
@@ -1114,7 +1258,7 @@
     const extras = card.section === "keycloak" ? keycloakExtras() : "";
     const tests = (card.tests || []).map(testResult).join("");
     return `
-      <form class="card panel auth-card" id="auth-${card.section}" data-section="${card.section}" novalidate autocomplete="off">
+      <form class="card panel auth-card" id="auth-${card.section}" data-section="${card.section}" dir="${state.lang === "he" ? "rtl" : "ltr"}" novalidate autocomplete="off">
         <div class="panel-head">
           <div class="auth-card-title">
             <span class="glyph-tile auth-glyph">${icon(card.icon)}</span>
@@ -1330,7 +1474,7 @@
 
   // ------------------------------------------------------ Portal interface
 
-  const UI_GROUPS = ["tabs", "header", "content"];
+  const UI_GROUPS = ["tabs", "header", "content", "onboarding"];
   const hiddenCount = (values) => Object.values(values || {}).filter((v) => !v).length;
   const uiDirty = () => Boolean(state.ui) && state.ui.elements.some(({ key }) => state.uiDraft[key] !== state.ui.visibility[key]);
 
@@ -1551,14 +1695,14 @@
   function renderDrawer() {
     const d = state.drawer;
     if (!d) return;
-    const views = { app: appEditor, stack: stackEditor, platform: platformEditor };
+    const views = { app: appEditor, stack: stackEditor, platform: platformEditor, repo: repoEditor, action: actionEditor };
     const { title, body, foot } = views[d.type](d);
     $("#drawer-title").innerHTML = title;
     $("#drawer-body").innerHTML = body;
     $("#drawer-foot").innerHTML = foot;
   }
 
-  const field = (label, control, hint = "") => `<label class="field"><span>${esc(label)}</span>${control}${hint ? `<span class="hint">${esc(hint)}</span>` : ""}</label>`;
+  const field = (label, control, hint = "") => `<label class="field form-group"><span>${esc(label)}</span>${control}${hint ? `<span class="hint form-hint">${esc(hint)}</span>` : ""}</label>`;
 
   function iconEditor({ url, name, source, kind, id, hasUpload, extra = "" }) {
     return `
@@ -1586,13 +1730,18 @@
     const catOptions = [`<option value="">${esc(t("auto"))}</option>`]
       .concat(state.options.categories.map((c) => `<option value="${esc(c.id)}" ${o.category === c.id ? "selected" : ""}>${esc(state.lang === "en" ? c.label_en : c.label_he)}</option>`)).join("");
     const featuredVal = o.featured === true ? "yes" : o.featured === false ? "no" : "";
+    const visSwitch = (name, value, checked, label) => `
+      <label class="switch" title="${esc(label)}">
+        <input type="checkbox" name="${name}"${value ? ` value="${esc(value)}"` : ""}${checked ? " checked" : ""}>
+        <span class="switch-track"></span>
+      </label>`;
     const files = a.files.map((f) => `
       <li class="file-toggle ${f.hidden ? "off" : ""}">
-        <input type="checkbox" name="file" value="${esc(f.rel_path)}" ${f.hidden ? "" : "checked"} aria-label="${esc(f.filename)}">
         <span class="file-name" title="${esc(f.rel_path)}">${esc(f.filename)}</span>
         ${f.version ? `<span class="version-tag">v${esc(f.version)}</span>` : ""}
         <span class="os-tag">${esc(f.os)}</span>
         <span class="size-tag">${esc(f.size_human)}</span>
+        ${visSwitch("file", f.rel_path, !f.hidden, f.hidden ? t("visHidden") : t("visShown"))}
       </li>`).join("");
     return {
       title: `${esc(t("editApp"))} · ${bdi(a.scanned_name)}`,
@@ -1607,11 +1756,15 @@
           ${field(t("descriptionHe"), `<textarea class="textarea" name="description_he" maxlength="2000" dir="rtl" placeholder="${esc(a.scanned_description_he)}">${esc(o.description_he || "")}</textarea>`)}
           ${field(t("descriptionEn"), `<textarea class="textarea" name="description_en" maxlength="2000" dir="ltr" placeholder="${esc(a.scanned_description_en)}">${esc(o.description_en || "")}</textarea>`)}
           ${field(t("tags"), `<input class="input" name="tags" maxlength="400" value="${esc((o.tags || []).join(", "))}" placeholder="${esc((o.tags ? [] : a.tags).join(", "))}">`, t("tagsHint"))}
-          <label class="check"><input type="checkbox" name="hidden" ${o.hidden ? "checked" : ""}>${esc(t("hideApp"))}</label>
-          <div class="fieldset">
-            <div class="fieldset-title"><span>${esc(t("installersVisibility"))}</span><span class="subtle mono">${a.files.length}</span></div>
-            <p class="hint subtle" style="margin-bottom:10px;font-size:12px">${esc(t("installersHint"))}</p>
-            <ul class="file-toggle-list">${files}</ul>
+          <div class="vis-card">
+            <div class="vis-app">
+              <span class="vis-pill ${o.hidden ? "is-off" : "is-on"}" id="vis-app-pill">${esc(o.hidden ? t("visHidden") : t("visShown"))}</span>
+              <span class="vis-app-label">${esc(t("hideApp"))}</span>
+              ${visSwitch("hidden", "", !o.hidden, t("hideApp"))}
+            </div>
+            <div class="vis-files-head"><span>${esc(t("installersVisibility"))}</span><span class="subtle mono">${a.files.length}</span></div>
+            <p class="hint form-hint">${esc(t("installersHint"))}</p>
+            <ul class="file-toggle-list">${files || `<li class="file-toggle"><span class="file-name">—</span></li>`}</ul>
           </div>
           <div class="form-error" id="drawer-error" role="alert"></div>
         </form>`,
@@ -1759,6 +1912,87 @@
     };
   }
 
+  // Inline glyph picker using the shared ICONS set (reuses the pick-glyph handler).
+  function inlineGlyphPicker(active) {
+    return GLYPH_CHOICES.map((name) => `
+      <button type="button" class="glyph-option ${active === name ? "active" : ""}" data-action="pick-glyph" data-glyph="${esc(name)}" title="${esc(name)}" aria-label="${esc(name)}">${icon(name)}</button>`).join("");
+  }
+
+  function repoEditor(d) {
+    const r = d.id != null ? state.repos.find((x) => x.id === d.id) : null;
+    if (!state.builder) state.builder = { icon: r ? r.icon : "package", color: r ? r.color : COLORS[0] };
+    const b = state.builder;
+    const techs = (state.options.repo_techs || []).map((tech) =>
+      `<option value="${esc(tech)}" ${(r ? r.tech : "other") === tech ? "selected" : ""}>${esc(repoTechLabel(tech))}</option>`).join("");
+    return {
+      title: esc(r ? `${t("editRepo")} · ${r.name}` : t("newRepo")),
+      body: `
+        <form class="form" id="drawer-form" novalidate>
+          <div class="form-row">
+            ${field(t("name"), `<input class="input" name="name" maxlength="100" required value="${esc(r ? r.name : "")}">`)}
+            ${field(t("repoTech"), `<select class="input" name="tech">${techs}</select>`)}
+          </div>
+          ${field(t("repoUrl"), `<input class="input mono" name="url" maxlength="500" dir="ltr" placeholder="https://nexus.example.com/#browse/browse:repo" value="${esc(r ? r.url : "")}">`, t("repoUrlHint"))}
+          <div class="form-row">
+            ${field(t("descriptionHe"), `<textarea class="textarea" name="description_he" maxlength="300" dir="rtl">${esc(r ? r.description_he : "")}</textarea>`)}
+            ${field(t("descriptionEn"), `<textarea class="textarea" name="description_en" maxlength="300" dir="ltr">${esc(r ? r.description_en : "")}</textarea>`)}
+          </div>
+          <div class="field"><span class="field-label">${esc(t("icon"))}</span><div class="glyph-picker">${inlineGlyphPicker(b.icon)}</div></div>
+          <div class="form-row">
+            <div class="field"><span class="field-label">${esc(t("color"))}</span>${colorPicker(b.color)}</div>
+            ${field(t("sortOrder"), positionInput(r ? r.sort_order : null, state.repos.length), t("sortOrderHint"))}
+          </div>
+          <div class="form-error" id="drawer-error" role="alert"></div>
+        </form>`,
+      foot: `
+        ${r ? `<button class="btn btn-danger" type="button" data-action="delete-repo" data-id="${r.id}">${esc(t("delete"))}</button>` : ""}
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" type="button" data-action="close-drawer">${esc(t("cancel"))}</button>
+        <button class="btn btn-primary" type="button" data-action="save-repo" data-id="${r ? r.id : ""}">${esc(t("save"))}</button>`,
+    };
+  }
+
+  function actionEditor(d) {
+    const a = d.id != null ? state.actions.find((x) => x.key === d.id) : null;
+    const isBuiltin = Boolean(a && a.builtin);
+    if (!state.builder) state.builder = { icon: a ? a.icon : "sliders" };
+    const b = state.builder;
+    const kindSel = (k) => `<option value="${k}" ${(a ? a.kind : "link") === k ? "selected" : ""}>${k === "download" ? t("actKindDownload") : t("actKindLink")}</option>`;
+    const chips = a && a.chips ? a.chips.join(", ") : "";
+    const toggle = (name, checked, label) => `<label class="switch-row action-toggle"><span class="switch"><input type="checkbox" name="${name}"${checked ? " checked" : ""}><span class="switch-track"></span></span><span class="switch-caption">${esc(label)}</span></label>`;
+    return {
+      title: esc(a ? `${t("editAction")} · ${actionDisplayName(a)}` : t("newAction")),
+      body: `
+        <form class="form" id="drawer-form" novalidate>
+          ${isBuiltin ? `<div class="form-note">${esc(t("actBuiltinNote"))}</div>` : `
+          <div class="form-row">
+            ${field(t("actKind"), `<select class="input" name="kind">${kindSel("link")}${kindSel("download")}</select>`)}
+            ${field(t("actTarget"), `<input class="input mono" name="target" maxlength="500" dir="ltr" placeholder="https://… | /api/tools/setup.cmd" value="${esc(a ? a.target : "")}">`, t("actTargetHint"))}
+          </div>`}
+          <div class="form-row">
+            ${field(t("nameHe"), `<input class="input" name="name_he" maxlength="120" dir="rtl"${isBuiltin ? ` placeholder="${esc(actionDisplayName(a))}"` : " required"} value="${esc(a ? a.name_he : "")}">`)}
+            ${field(t("nameEn"), `<input class="input" name="name_en" maxlength="120" dir="ltr" value="${esc(a ? a.name_en : "")}">`)}
+          </div>
+          <div class="form-row">
+            ${field(t("descriptionHe"), `<textarea class="textarea" name="description_he" maxlength="400" dir="rtl">${esc(a ? a.description_he : "")}</textarea>`)}
+            ${field(t("descriptionEn"), `<textarea class="textarea" name="description_en" maxlength="400" dir="ltr">${esc(a ? a.description_en : "")}</textarea>`)}
+          </div>
+          ${field(t("actChips"), `<input class="input" name="chips" maxlength="200" value="${esc(chips)}">`, t("actChipsHint"))}
+          <div class="field"><span class="field-label">${esc(t("icon"))}</span><div class="glyph-picker">${inlineGlyphPicker(b.icon)}</div></div>
+          <div class="form-row">
+            ${field(t("sortOrder"), positionInput(a ? a.sort_order : null, state.actions.length), t("sortOrderHint"))}
+            <div class="field"><span class="field-label">${esc(t("actState"))}</span><div class="action-toggles">${toggle("enabled", !a || a.enabled, t("actEnabled"))}${toggle("english", Boolean(a && a.english), t("actEnglish"))}</div></div>
+          </div>
+          <div class="form-error" id="drawer-error" role="alert"></div>
+        </form>`,
+      foot: `
+        ${a && !isBuiltin ? `<button class="btn btn-danger" type="button" data-action="delete-action" data-id="${esc(a.key)}">${esc(t("delete"))}</button>` : ""}
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" type="button" data-action="close-drawer">${esc(t("cancel"))}</button>
+        <button class="btn btn-primary" type="button" data-action="save-action" data-id="${a ? esc(a.key) : ""}">${esc(t("save"))}</button>`,
+    };
+  }
+
   function rerenderBuilder() {
     const host = $("#builder");
     if (!host) return;
@@ -1789,7 +2023,7 @@
       category: form.category.value || null,
       tags: tagsRaw ? tagsRaw.split(",").map((s) => s.trim()).filter(Boolean) : null,
       featured: featured === "yes" ? true : featured === "no" ? false : null,
-      hidden: form.hidden.checked,
+      hidden: form.hidden ? !form.hidden.checked : false,
       hidden_files: $$("input[name=file]", form).filter((c) => !c.checked).map((c) => c.value),
     };
     const updated = await api("PUT", `/api/admin/apps/${encodeURIComponent(id)}`, body);
@@ -1849,6 +2083,50 @@
     } else {
       closeDrawer();
     }
+  }
+
+  async function saveRepository(id) {
+    const form = $("#drawer-form");
+    const b = state.builder;
+    const body = {
+      name: form.name.value,
+      tech: form.tech.value,
+      url: form.url.value.trim(),
+      description_he: form.description_he.value,
+      description_en: form.description_en.value,
+      icon: b.icon,
+      color: b.color,
+      sort_order: readPosition(form),
+    };
+    if (id) await api("PUT", `/api/admin/repositories/${id}`, body);
+    else await api("POST", "/api/admin/repositories", body);
+    toast(t("saved"), "success");
+    closeDrawer();
+    await reload("repos");
+  }
+
+  async function saveAction(key) {
+    const form = $("#drawer-form");
+    const b = state.builder;
+    const chips = form.chips.value.split(",").map((s) => s.trim()).filter(Boolean);
+    const body = {
+      kind: form.kind ? form.kind.value : "link",
+      name_he: form.name_he.value,
+      name_en: form.name_en.value,
+      description_he: form.description_he.value,
+      description_en: form.description_en.value,
+      icon: b.icon,
+      target: form.target ? form.target.value.trim() : "",
+      chips,
+      english: Boolean(form.english && form.english.checked),
+      enabled: Boolean(form.enabled && form.enabled.checked),
+      sort_order: readPosition(form),
+    };
+    if (key) await api("PUT", `/api/admin/actions/${encodeURIComponent(key)}`, body);
+    else await api("POST", "/api/admin/actions", body);
+    toast(t("saved"), "success");
+    closeDrawer();
+    await reload("actions");
   }
 
   function confirmDialog(title, text, okLabel) {
@@ -2022,6 +2300,30 @@
             await reload("platforms", "overview");
           }
           break;
+        case "new-repo": state.builder = null; openDrawer({ type: "repo", id: null }); break;
+        case "edit-repo": event.stopPropagation(); state.builder = null; openDrawer({ type: "repo", id: Number(id) }); break;
+        case "save-repo": el.disabled = true; drawerError(""); await saveRepository(id ? Number(id) : null); break;
+        case "delete-repo":
+          event.stopPropagation();
+          if (await confirmDialog(t("confirmDeleteRepo"), t("confirmDeleteText"), t("delete"))) {
+            await api("DELETE", `/api/admin/repositories/${id}`);
+            closeDrawer();
+            toast(t("deleted"), "success");
+            await reload("repos");
+          }
+          break;
+        case "new-action": state.builder = null; openDrawer({ type: "action", id: null }); break;
+        case "edit-action": event.stopPropagation(); state.builder = null; openDrawer({ type: "action", id: String(id) }); break;
+        case "save-action": el.disabled = true; drawerError(""); await saveAction(id || null); break;
+        case "delete-action":
+          event.stopPropagation();
+          if (await confirmDialog(t("confirmDeleteAction"), t("confirmDeleteText"), t("delete"))) {
+            await api("DELETE", `/api/admin/actions/${encodeURIComponent(id)}`);
+            closeDrawer();
+            toast(t("deleted"), "success");
+            await reload("actions");
+          }
+          break;
         case "fetch-favicon": {
           el.disabled = true;
           const res = await api("POST", `/api/admin/platforms/${id}/favicon`);
@@ -2102,6 +2404,11 @@
     state.lang = lang === "en" ? "en" : "he";
     window.PAKAL.saveLang(state.lang);
     window.PAKAL.applyDocumentLang(state.lang);
+    const dir = state.lang === "he" ? "rtl" : "ltr";
+    ["shell", "admin-main"].forEach((id) => {
+      const node = document.getElementById(id);
+      if (node) node.setAttribute("dir", dir);
+    });
     document.title = `${t("brand")} · ${t("adminBadge")}`;
     $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
     $$("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); el.setAttribute("aria-label", t(el.dataset.i18nTitle)); });
@@ -2172,6 +2479,14 @@
         $$(".swatch").forEach((s) => s.classList.toggle("active", s.dataset.color.toLowerCase() === target.value.toLowerCase()));
       } else if (target.name === "file") {
         target.closest(".file-toggle").classList.toggle("off", !target.checked);
+      } else if (target.name === "hidden") {
+        const pill = $("#vis-app-pill");
+        if (pill) {
+          const hidden = !target.checked;
+          pill.textContent = hidden ? t("visHidden") : t("visShown");
+          pill.classList.toggle("is-off", hidden);
+          pill.classList.toggle("is-on", !hidden);
+        }
       }
     });
     document.addEventListener("keydown", (event) => {

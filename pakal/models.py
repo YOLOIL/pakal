@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AppFile(BaseModel):
@@ -82,6 +82,33 @@ class Platform(BaseModel):
     color: str = "#6366F1"
 
 
+class Repository(BaseModel):
+    id: int
+    name: str
+    tech: str = "other"
+    url: str = ""
+    description_he: str = ""
+    description_en: str = ""
+    icon: str = "package"
+    color: str = "#6366F1"
+    sort_order: int = 0
+
+
+class ActionItem(BaseModel):
+    key: str
+    builtin: str = ""
+    kind: str = "link"
+    name_he: str = ""
+    name_en: str = ""
+    description_he: str = ""
+    description_en: str = ""
+    icon: str = "sliders"
+    target: str = ""
+    chips: List[str] = Field(default_factory=list)
+    english: bool = False
+    sort_order: int = 0
+
+
 class Category(BaseModel):
     id: str
     label_he: str
@@ -105,8 +132,40 @@ class Catalog(BaseModel):
     apps: List[AppEntry] = Field(default_factory=list)
     bundles: List[Bundle] = Field(default_factory=list)
     platforms: List[Platform] = Field(default_factory=list)
+    repositories: List[Repository] = Field(default_factory=list)
+    actions: List[ActionItem] = Field(default_factory=list)
     categories: List[Category] = Field(default_factory=list)
     scan: ScanStatus = Field(default_factory=ScanStatus)
+
+
+class DocPointer(BaseModel):
+    """Where a guide file lives. `member` is set when the file is inside a zip."""
+
+    filename: str
+    type: str = "text"
+    rel_path: str
+    member: str = ""
+
+
+class SoftwareDocs(BaseModel):
+    files: List[DocPointer] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_pair(cls, value):
+        """Older caches stored a single readme and license instead of a file list."""
+        if isinstance(value, dict) and "files" not in value:
+            files = [item for key in ("readme", "license") if isinstance((item := value.get(key)), dict)]
+            return {"files": files}
+        return value
+
+
+class SoftwareDocOut(BaseModel):
+    text: str = ""
+    type: str = "text"
+    filename: str = ""
+    found: bool = False
+    truncated: bool = False
 
 
 class ScanResult(BaseModel):
@@ -114,4 +173,5 @@ class ScanResult(BaseModel):
 
     apps: List[AppEntry] = Field(default_factory=list)
     folder_icons: Dict[str, str] = Field(default_factory=dict)
+    docs: Dict[str, SoftwareDocs] = Field(default_factory=dict)
     root_available: bool = False

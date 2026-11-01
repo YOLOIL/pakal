@@ -16,8 +16,10 @@ import json
 import logging
 import re
 import secrets
+import shutil
 import ssl
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -27,7 +29,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import urlencode
 
-from . import auth_config
+from . import auth_config, config
 
 log = logging.getLogger("pakal.nexus")
 
@@ -43,6 +45,9 @@ REPO_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 MAX_REPOS_PER_KIND = 10
 
 _FILENAME_RE = re.compile(r"^[\w@+.,~()\[\] -]{1,255}$")
+# One ZIP path segment. A leading @ is an npm scope directory (@angular), not a sanitization error.
+_ZIP_PART_RE = re.compile(r"^@?[A-Za-z0-9._+-]{1,214}$")
+_MAX_ZIP_PACKAGES = 400
 _WHEEL_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.]+?)-(?P<version>[A-Za-z0-9_.!+]+)(-\d[^-]*)?-[^-]+-[^-]+-[^-]+\.whl$",
                        re.IGNORECASE)
 _EXISTS_RE = re.compile(r"does not allow updating|already exists|redeploy|cannot be updated|not allowed to update",
@@ -99,10 +104,39 @@ def public_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clean_filename(value: str) -> str:
+    """Basename only. ``@`` is kept, so ``@angular-core-1.0.0.tgz`` is a valid upload name."""
     name = re.split(r"[\\/]", str(value or ""))[-1].strip()
     if not name or name.startswith(".") or not _FILENAME_RE.match(name):
         raise PackageError("Invalid file name")
     return name
+
+
+def safe_zip_member(name: str) -> str:
+    """Archive-relative path, or "" when it is unsafe.
+
+    Scope directories are preserved: ``@angular/core/core-1.0.0.tgz`` stays intact.
+    ``..``, absolute paths and drive letters are rejected.
+    """
+    raw = str(name or "").replace("\\", "/").strip()
+    if not raw or raw.startswith("/") or re.match(r"^[A-Za-z]:", raw) or "\x00" in raw:
+        return ""
+    parts = [part for part in raw.split("/") if part not in ("", ".")]
+    if not parts or any(part == ".." for part in parts) or any(not _ZIP_PART_RE.match(part) for part in parts):
+        return ""
+    return "/".join(parts)
+
+
+def member_kind(rel_path: str) -> Optional[str]:
+    """Package type of a ZIP member. A ``.tar.gz`` under an ``@scope`` directory is an npm package."""
+    lower = rel_path.lower()
+    scoped = any(part.startswith("@") for part in rel_path.split("/"))
+    if lower.endswith(".tgz") or (lower.endswith(".tar.gz") and scoped):
+        return "npm"
+    if lower.endswith(".tar.gz") or lower.endswith(".whl"):
+        return "pypi"
+    if lower.endswith(".nupkg"):
+        return "powershell"
+    return None
 
 
 def file_extension(filename: str) -> Optional[str]:
@@ -268,6 +302,19 @@ def _request(cfg: Dict[str, Any], method: str, path: str, *, auth: bool = True, 
         raise NexusError(f"Cannot reach Nexus: {reason}") from exc
 
 
+def open_repository_file(cfg: Dict[str, Any], repository: str, path: str, timeout: float = 120):
+    """GET a file from a Nexus hosted repository. The caller closes the response."""
+    url = str(cfg.get("url", "")).rstrip("/") + f"/repository/{repository}/{path.lstrip('/')}"
+    request = urllib.request.Request(url, method="GET", headers={**_headers(cfg), "Accept": "*/*"})
+    try:
+        return urllib.request.urlopen(request, timeout=timeout, context=_ssl_context(cfg))
+    except urllib.error.HTTPError as exc:
+        raise NexusError(_error_text(exc) or exc.reason or f"HTTP {exc.code}", exc.code) from exc
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        reason = getattr(exc, "reason", exc)
+        raise NexusError(f"Cannot reach Nexus: {reason}") from exc
+
+
 def _request_json(cfg: Dict[str, Any], path: str, *, auth: bool = True, timeout: float = 15) -> Any:
     _status, body = _request(cfg, "GET", path, auth=auth, timeout=timeout)
     try:
@@ -344,6 +391,85 @@ def upload_asset(cfg: Dict[str, Any], kind: str, repository: str, path: Path, fi
     except NexusError as exc:
         return _classify_failure(exc, repository)
     return "success", f"Published to {repository}"
+
+
+def expand_package_zip(archive_path: Path, dest: Path) -> List[Dict[str, Any]]:
+    """Extract publishable members, recreating ``@scope`` directories under ``dest``."""
+    if not zipfile.is_zipfile(archive_path):
+        raise PackageError("The file is not a valid ZIP archive")
+    found: List[Dict[str, Any]] = []
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            for info in archive.infolist():
+                if info.is_dir():
+                    continue
+                rel = safe_zip_member(info.filename)
+                kind = member_kind(rel) if rel else None
+                if not kind:
+                    continue
+                if len(found) >= _MAX_ZIP_PACKAGES:
+                    raise PackageError(f"The archive has more than {_MAX_ZIP_PACKAGES} packages")
+                target = dest.joinpath(*rel.split("/"))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if target.exists():
+                    raise PackageError(f"Duplicate path in archive: {rel}")
+                with archive.open(info) as source, open(target, "xb") as sink:
+                    shutil.copyfileobj(source, sink, _CHUNK)
+                found.append({"path": rel, "filename": rel.rsplit("/", 1)[-1], "file": target, "kind": kind})
+    except PackageError:
+        raise
+    except (zipfile.BadZipFile, OSError, zlib.error, EOFError) as exc:
+        raise PackageError(f"Corrupt ZIP archive: {exc}") from exc
+    if not found:
+        raise PackageError("The ZIP contains no .tgz, .tar.gz, .whl or .nupkg files")
+    return found
+
+
+def publish_zip(cfg: Dict[str, Any], kind_hint: str, repository: str, archive_path: Path, filename: str) -> Dict[str, Any]:
+    """Publish every package inside a ZIP. Scoped npm paths are kept and sent to the NPM repository."""
+    work = Path(tempfile.mkdtemp(prefix="pakal-zip-", dir=config.UPLOAD_TMP_DIR))
+    try:
+        members = expand_package_zip(archive_path, work)
+        results: List[Dict[str, Any]] = []
+        for member in members:
+            kind = member["kind"]
+            repos = repos_for(cfg, kind)
+            target = repository if kind == kind_hint and repository in repos else (repos[0] if repos else "")
+            if not target:
+                results.append({
+                    "path": member["path"], "filename": member["filename"], "kind": kind, "repository": "",
+                    "package": "", "version": "", "status": "failed",
+                    "detail": f"No {kind} repository is configured",
+                })
+                continue
+            try:
+                published = publish(cfg, kind, target, member["file"], member["filename"])
+            except PackageError as exc:
+                published = {
+                    "filename": member["filename"], "kind": kind, "repository": target,
+                    "package": "", "version": "", "status": "failed", "detail": str(exc),
+                }
+            published["path"] = member["path"]
+            results.append(published)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    failed = sum(1 for item in results if item["status"] == "failed")
+    existed = sum(1 for item in results if item["status"] == "exists")
+    published_ok = sum(1 for item in results if item["status"] == "success")
+    if failed and not published_ok and not existed:
+        status = "failed"
+    elif failed:
+        status = "failed"
+    elif published_ok:
+        status = "success"
+    else:
+        status = "exists"
+    first = next((item for item in results if item.get("package")), results[0])
+    detail = f"Published {published_ok}, already present {existed}, failed {failed}"
+    return {
+        "filename": filename, "kind": kind_hint, "repository": repository, "status": status, "detail": detail,
+        "package": first.get("package") or "", "version": first.get("version") or "", "packages": results,
+    }
 
 
 def publish(cfg: Dict[str, Any], kind: str, repository: str, path: Path, filename: str) -> Dict[str, Any]:

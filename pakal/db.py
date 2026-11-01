@@ -11,7 +11,7 @@ from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text, create_en
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from . import config
-from .knowledge import DEFAULT_BUNDLES, DEFAULT_PLATFORMS, ROLE_BUNDLES
+from .knowledge import DEFAULT_BUNDLES, DEFAULT_PLATFORMS, DEFAULT_REPOSITORIES, REPO_TECHS, ROLE_BUNDLES
 from .scanner import read_json
 
 log = logging.getLogger("pakal.db")
@@ -88,6 +88,53 @@ class Feedback(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
+class RepositoryLink(Base):
+    """An artifact repository (Nexus) shown on the Repositories tab. Fully admin-managed."""
+
+    __tablename__ = "repositories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    tech: Mapped[str] = mapped_column(String(20), default="other")
+    url: Mapped[str] = mapped_column(String(600), default="")
+    description_he: Mapped[str] = mapped_column(String(300), default="")
+    description_en: Mapped[str] = mapped_column(String(300), default="")
+    icon: Mapped[str] = mapped_column(String(40), default="package")
+    color: Mapped[str] = mapped_column(String(7), default="#6366F1")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class Action(Base):
+    """An entry on the Actions hub. Built-in tools (nexus/docker/powershell) keep their code-backed panels;
+    custom actions are simple link/download cards. All metadata and ordering are admin-managed."""
+
+    __tablename__ = "actions"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    builtin: Mapped[str] = mapped_column(String(32), default="")
+    kind: Mapped[str] = mapped_column(String(16), default="link")
+    name_he: Mapped[str] = mapped_column(String(120), default="")
+    name_en: Mapped[str] = mapped_column(String(120), default="")
+    description_he: Mapped[str] = mapped_column(String(400), default="")
+    description_en: Mapped[str] = mapped_column(String(400), default="")
+    icon: Mapped[str] = mapped_column(String(40), default="sliders")
+    target: Mapped[str] = mapped_column(String(600), default="")
+    chips: Mapped[List[str]] = mapped_column(JSON, default=list)
+    english: Mapped[bool] = mapped_column(Boolean, default=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+# Built-in actions seeded once; names are left blank so the portal falls back to its own translations.
+_BUILTIN_ACTIONS: List[Dict[str, Any]] = [
+    {"key": "nexus", "builtin": "nexus", "icon": "upload", "english": False},
+    {"key": "powershell", "builtin": "powershell", "icon": "terminal", "english": False},
+    {"key": "docker", "builtin": "docker", "icon": "container", "english": True},
+]
+
+
 class Setting(Base):
     __tablename__ = "settings"
 
@@ -156,7 +203,7 @@ def set_setting(key: str, value: str) -> None:
 
 
 def _ordered(session: Session, model: Any) -> List[Any]:
-    tiebreak = model.id if model is PlatformLink else model.name_en
+    tiebreak = model.id if model in (PlatformLink, RepositoryLink) else model.name_en
     return list(session.scalars(select(model).order_by(model.sort_order, tiebreak)))
 
 
@@ -227,6 +274,37 @@ def _stack_row(stack_id: str, item: Dict[str, Any], sort_order: int) -> DevStack
     )
 
 
+def _seed_repositories(session: Session) -> None:
+    base = config.NEXUS_URL.rstrip("/") if getattr(config, "NEXUS_URL", "") else ""
+    for index, item in enumerate(DEFAULT_REPOSITORIES):
+        tech = str(item.get("tech") or "other")
+        if tech not in REPO_TECHS:
+            tech = "other"
+        # Give repositories a best-effort browse URL from the configured Nexus base; admins refine it later.
+        url = str(item.get("url") or "")
+        if not url and base and tech not in ("pypi", "docker"):
+            url = f"{base}/#browse/browse:{item['name']}"
+        session.add(RepositoryLink(
+            name=str(item["name"])[:100], tech=tech, url=url[:600],
+            description_he=str(item.get("description_he") or "")[:300],
+            description_en=str(item.get("description_en") or "")[:300],
+            icon=str(item.get("icon") or "package")[:40],
+            color=str(item.get("color") or "#6366F1")[:7],
+            sort_order=index,
+        ))
+
+
+def _seed_actions(session: Session) -> None:
+    existing = set(session.scalars(select(Action.key)))
+    for index, item in enumerate(_BUILTIN_ACTIONS):
+        if item["key"] in existing:
+            continue
+        session.add(Action(
+            key=item["key"], builtin=item["builtin"], kind="builtin", icon=item["icon"],
+            english=bool(item.get("english")), enabled=True, sort_order=index,
+        ))
+
+
 def _add_role_bundles(session: Session) -> None:
     """Existing installations get the role presets once, placed first; ids already in use are left alone."""
     existing = set(session.scalars(select(DevStack.id)))
@@ -251,7 +329,15 @@ def init_db() -> None:
             session.flush()
             _add_role_bundles(session)
             _set_setting(session, "seeded_role_bundles", "1")
+        if _get_setting(session, "seeded_repositories") is None:
+            if session.scalars(select(RepositoryLink.id).limit(1)).first() is None:
+                _seed_repositories(session)
+            _set_setting(session, "seeded_repositories", "1")
+        if _get_setting(session, "seeded_actions") is None:
+            _seed_actions(session)
+            _set_setting(session, "seeded_actions", "1")
         session.flush()
         normalize_order(session, PlatformLink)
         normalize_order(session, DevStack)
+        normalize_order(session, RepositoryLink)
     log.info("Database ready at %s", config.DATABASE_FILE)

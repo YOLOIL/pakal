@@ -17,12 +17,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import auth_config, config, directory, docker_build, docker_registry, icons, nexus, portal_ui, sso
-from .db import AppOverride, DevStack, Feedback, PlatformLink, get_session, normalize_order, place_in_order
-from .knowledge import BUILTIN_ICON_NAMES, CATEGORIES, STACK_GLYPHS
+from .db import Action, AppOverride, DevStack, Feedback, PlatformLink, RepositoryLink, get_session, normalize_order, place_in_order
+from .knowledge import BUILTIN_ICON_NAMES, CATEGORIES, REPO_TECHS, STACK_GLYPHS
 from .schemas import (
-    FEEDBACK_CATEGORIES, FEEDBACK_STATUSES, AnnouncementIn, AppOverrideIn, AppOverrideOut, FeedbackStatusIn, IconUploadIn, LoginIn,
-    AUTH_SECTION_MODELS, DockerSettingsIn, LdapLookupTestIn, NexusSettingsIn, PlatformIn, PlatformOut, SettingsIn, StackIn, StackOut,
-    VisibilityIn,
+    FEEDBACK_CATEGORIES, FEEDBACK_STATUSES, ActionOut, ActionSaveIn, AnnouncementIn, AppOverrideIn, AppOverrideOut,
+    FeedbackStatusIn, IconUploadIn, LoginIn,
+    AUTH_SECTION_MODELS, DockerSettingsIn, LdapLookupTestIn, NexusSettingsIn, PlatformIn, PlatformOut,
+    RepositoryIn, RepositoryOut, SettingsIn, StackIn, StackOut, VisibilityIn,
 )
 from .security import (
     COOKIE_NAME, CSRF_HEADER, admin_configured, client_ip, cookie_secure, create_token, global_login_throttle,
@@ -49,9 +50,12 @@ class RescanIn(BaseModel):
 
 def _issue_admin_cookie(request: Request, response: Response, username: str, source: str, name: str = "") -> Dict[str, Any]:
     token, expires = create_token(username, source, name)
+    # SameSite=Lax (not Strict) so the console session reliably accompanies top-level navigations between the
+    # portal and the console (e.g. "Back to Portal"). CSRF is still covered: every admin mutation also requires
+    # the X-PAKAL-Request header, which a cross-site request cannot set.
     response.set_cookie(
         COOKIE_NAME, token, max_age=config.JWT_TTL_MINUTES * 60, httponly=True,
-        secure=cookie_secure(request), samesite="strict", path="/",
+        secure=cookie_secure(request), samesite="lax", path="/",
     )
     response.headers["Cache-Control"] = "no-store"
     return {"username": username, "name": name or username, "source": source, "expires_at": expires}
@@ -126,7 +130,7 @@ def sso_session(request: Request, response: Response) -> Dict[str, Any]:
 @protected.post("/logout")
 def logout(request: Request, response: Response, session: dict = Depends(require_admin)) -> Dict[str, str]:
     revoke_token(session)
-    response.delete_cookie(COOKIE_NAME, path="/", samesite="strict", secure=cookie_secure(request), httponly=True)
+    response.delete_cookie(COOKIE_NAME, path="/", samesite="lax", secure=cookie_secure(request), httponly=True)
     return {"status": "ok"}
 
 
@@ -141,6 +145,7 @@ def options() -> Dict[str, Any]:
     return {
         "builtin_icons": BUILTIN_ICON_NAMES,
         "stack_glyphs": STACK_GLYPHS,
+        "repo_techs": REPO_TECHS,
         "categories": [{"id": cid, "label_he": he, "label_en": en} for cid, he, en in CATEGORIES if cid != "all"],
     }
 
@@ -232,7 +237,7 @@ def _auth_changed(section: str) -> None:
         sso.clear_probe_cache()
     elif section == "docker":
         docker_registry.clear_cache()
-    elif section != "nexus":
+    elif section not in ("nexus", "powershell"):
         directory.clear_cache()
 
 
@@ -719,6 +724,150 @@ def delete_stack(stack_id: str, db: Session = Depends(get_session)) -> Response:
     db.delete(row)
     db.flush()
     normalize_order(db, DevStack)
+    db.commit()
+    store.invalidate_view()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------- #
+# Repositories (Nexus artifact repositories shown on the Repositories tab)
+# --------------------------------------------------------------------------- #
+
+
+def _repository_out(row: RepositoryLink) -> Dict[str, Any]:
+    return RepositoryOut(
+        id=row.id, name=row.name, tech=row.tech, url=row.url, description_he=row.description_he,
+        description_en=row.description_en, icon=row.icon, color=row.color, sort_order=row.sort_order,
+    ).model_dump()
+
+
+def _require_repository(db: Session, repo_id: int) -> RepositoryLink:
+    row = db.get(RepositoryLink, repo_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return row
+
+
+@protected.get("/repositories")
+def list_repositories(db: Session = Depends(get_session)) -> List[Dict[str, Any]]:
+    rows = db.scalars(select(RepositoryLink).order_by(RepositoryLink.sort_order, RepositoryLink.id))
+    return [_repository_out(row) for row in rows]
+
+
+@protected.post("/repositories", status_code=201)
+def create_repository(body: RepositoryIn, db: Session = Depends(get_session)) -> Dict[str, Any]:
+    row = RepositoryLink(**body.model_dump(exclude={"sort_order"}))
+    db.add(row)
+    place_in_order(db, RepositoryLink, row, body.sort_order)
+    db.commit()
+    store.invalidate_view()
+    return _repository_out(row)
+
+
+@protected.put("/repositories/{repo_id}")
+def update_repository(repo_id: int, body: RepositoryIn, db: Session = Depends(get_session)) -> Dict[str, Any]:
+    row = _require_repository(db, repo_id)
+    for key, value in body.model_dump(exclude={"sort_order"}).items():
+        setattr(row, key, value)
+    place_in_order(db, RepositoryLink, row, body.sort_order)
+    db.commit()
+    store.invalidate_view()
+    return _repository_out(row)
+
+
+@protected.delete("/repositories/{repo_id}", status_code=204)
+def delete_repository(repo_id: int, db: Session = Depends(get_session)) -> Response:
+    row = _require_repository(db, repo_id)
+    db.delete(row)
+    db.flush()
+    normalize_order(db, RepositoryLink)
+    db.commit()
+    store.invalidate_view()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------- #
+# Actions (Actions hub: built-in tools + admin-defined link/download cards)
+# --------------------------------------------------------------------------- #
+
+
+def _action_out(row: Action) -> Dict[str, Any]:
+    return ActionOut(
+        key=row.key, builtin=row.builtin, kind=row.kind, name_he=row.name_he, name_en=row.name_en,
+        description_he=row.description_he, description_en=row.description_en, icon=row.icon, target=row.target,
+        chips=list(row.chips or []), english=row.english, enabled=row.enabled, sort_order=row.sort_order,
+    ).model_dump()
+
+
+def _action_slug(body: ActionSaveIn) -> str:
+    base = (body.name_en or body.name_he or "action").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", base).strip("-")[:48]
+    return slug or f"action-{secrets.token_hex(3)}"
+
+
+@protected.get("/actions")
+def list_actions(db: Session = Depends(get_session)) -> List[Dict[str, Any]]:
+    rows = db.scalars(select(Action).order_by(Action.sort_order, Action.key))
+    return [_action_out(row) for row in rows]
+
+
+@protected.post("/actions", status_code=201)
+def create_action(body: ActionSaveIn, db: Session = Depends(get_session)) -> Dict[str, Any]:
+    if not (body.name_he or body.name_en):
+        raise HTTPException(status_code=422, detail="A name is required")
+    if not body.target:
+        raise HTTPException(status_code=422, detail="A link/download target is required")
+    key = _action_slug(body)
+    base_key, counter = key, 2
+    while db.get(Action, key):
+        key = f"{base_key}-{counter}"
+        counter += 1
+    row = Action(
+        key=key, builtin="", kind=body.kind,
+        name_he=body.name_he or body.name_en, name_en=body.name_en or body.name_he,
+        description_he=body.description_he, description_en=body.description_en, icon=body.icon,
+        target=body.target, chips=body.chips, english=body.english, enabled=body.enabled,
+    )
+    db.add(row)
+    place_in_order(db, Action, row, body.sort_order)
+    db.commit()
+    store.invalidate_view()
+    return _action_out(row)
+
+
+@protected.put("/actions/{key}")
+def update_action(key: str, body: ActionSaveIn, db: Session = Depends(get_session)) -> Dict[str, Any]:
+    row = db.get(Action, key)
+    if not row:
+        raise HTTPException(status_code=404, detail="Action not found")
+    row.name_he, row.name_en = body.name_he, body.name_en
+    row.description_he, row.description_en = body.description_he, body.description_en
+    row.icon, row.chips, row.english, row.enabled = body.icon, body.chips, body.english, body.enabled
+    if row.builtin:
+        # Built-in tools keep their code-backed behaviour; only presentation is editable.
+        row.kind = "builtin"
+    else:
+        if not (body.name_he or body.name_en):
+            raise HTTPException(status_code=422, detail="A name is required")
+        if not body.target:
+            raise HTTPException(status_code=422, detail="A link/download target is required")
+        row.kind, row.target = body.kind, body.target
+    place_in_order(db, Action, row, body.sort_order)
+    db.commit()
+    store.invalidate_view()
+    return _action_out(row)
+
+
+@protected.delete("/actions/{key}", status_code=204)
+def delete_action(key: str, db: Session = Depends(get_session)) -> Response:
+    row = db.get(Action, key)
+    if not row:
+        raise HTTPException(status_code=404, detail="Action not found")
+    if row.builtin:
+        raise HTTPException(status_code=400, detail="Built-in actions cannot be deleted; disable them instead")
+    db.delete(row)
+    db.flush()
+    normalize_order(db, Action)
     db.commit()
     store.invalidate_view()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

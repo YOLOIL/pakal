@@ -13,7 +13,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from starlette.requests import ClientDisconnect
 
-from . import config, nexus, portal_ui
+from . import config, nexus, portal_ui, powershell_setup
 from .security import COOKIE_NAME, CSRF_HEADER, USER_COOKIE, client_ip, decode_token, decode_user_token
 
 log = logging.getLogger("pakal.actions")
@@ -54,6 +54,13 @@ def actions_config(request: Request) -> JSONResponse:
     return JSONResponse(body, headers=NO_STORE)
 
 
+@router.get("/powershell")
+def powershell_guide() -> JSONResponse:
+    if not portal_ui.enabled("tab_actions"):
+        raise HTTPException(status_code=403, detail="The package uploader is disabled by the administrator")
+    return JSONResponse(powershell_setup.public_setup(), headers=NO_STORE)
+
+
 @router.put("/upload")
 async def upload_package(
     request: Request,
@@ -78,14 +85,18 @@ async def upload_package(
         name = nexus.clean_filename(filename)
     except nexus.PackageError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    is_zip = name.lower().endswith(".zip")
     detected = nexus.detect_kind(name)
-    if not detected or not nexus.accepts(kind, name):
+    if is_zip:
+        if kind != "npm":
+            raise HTTPException(status_code=422, detail="A ZIP of packages is published through the NPM target")
+    elif not detected or not nexus.accepts(kind, name):
         raise HTTPException(status_code=422, detail="This file type cannot be uploaded to the selected repository")
     targets = nexus.repos_for(cfg, kind)
     target = repository or (targets[0] if targets else "")
     if not target or target not in targets:
         raise HTTPException(status_code=422, detail="The selected repository is not configured for this package type")
-    if (kind != detected or target != targets[0]) and not portal_ui.enabled("upload_repo_override"):
+    if not is_zip and (kind != detected or target != targets[0]) and not portal_ui.enabled("upload_repo_override"):
         raise HTTPException(status_code=403, detail="Choosing a different repository is disabled by the administrator")
 
     limit = int(cfg.get("max_upload_mb") or 1) * _MB
@@ -106,7 +117,8 @@ async def upload_package(
                 handle.write(chunk)
         if not size:
             raise HTTPException(status_code=422, detail="Empty file")
-        result = await run_in_threadpool(nexus.publish, cfg, kind, target, tmp, name)
+        publish = nexus.publish_zip if is_zip else nexus.publish
+        result = await run_in_threadpool(publish, cfg, kind, target, tmp, name)
     except ClientDisconnect:
         log.info("Upload of %s cancelled by %s", name, who)
         raise HTTPException(status_code=400, detail="Upload cancelled")

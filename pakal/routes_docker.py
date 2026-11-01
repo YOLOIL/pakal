@@ -16,7 +16,7 @@ from starlette.requests import ClientDisconnect
 
 from . import docker_build, docker_registry, portal_ui
 from .routes_actions import _uploader
-from .security import CSRF_HEADER, client_ip, portal_admin
+from .security import CSRF_HEADER, client_ip
 
 log = logging.getLogger("pakal.docker.api")
 router = APIRouter(prefix="/api/docker", tags=["docker"])
@@ -24,6 +24,15 @@ router = APIRouter(prefix="/api/docker", tags=["docker"])
 NO_STORE = {"Cache-Control": "no-store"}
 _MB = 1024 * 1024
 _KEEPALIVE_SECONDS = 15
+# Two image builds at a time. Further requests wait here instead of starting more engine work.
+_build_limit: Optional[asyncio.Semaphore] = None
+
+
+def _image_build_limit() -> asyncio.Semaphore:
+    global _build_limit
+    if _build_limit is None:
+        _build_limit = asyncio.Semaphore(2)
+    return _build_limit
 
 
 def _build_access(request: Request, cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -35,8 +44,6 @@ def _build_access(request: Request, cfg: Dict[str, Any]) -> Dict[str, Any]:
     who = _uploader(request)
     if not who:
         return {"allowed": False, "reason": "sign_in"}
-    if cfg.get("build_admin_only") and not portal_admin(request):
-        return {"allowed": False, "reason": "admin_only"}
     return {"allowed": True, "reason": None, "who": who}
 
 
@@ -150,7 +157,6 @@ async def build_and_push(
             "disabled": (403, "Image builds are disabled by the administrator"),
             "not_configured": (503, "The Docker registry is not configured"),
             "sign_in": (401, "Sign in to build images"),
-            "admin_only": (403, "Only administrators may build images"),
         }[access["reason"]]
         raise HTTPException(status_code=status, detail=detail)
     image = image.strip().lower()
@@ -170,13 +176,33 @@ async def build_and_push(
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > limit:
         raise HTTPException(status_code=413, detail=f"The ZIP exceeds {limit // _MB} MB")
-    if not docker_build.acquire_slot():
-        raise HTTPException(status_code=429, detail="Too many builds are running - try again in a few minutes",
+
+    build_slots = _image_build_limit()
+    if build_slots.locked():
+        log.info("Docker build queued for %s; waiting for a free slot", client_ip(request))
+    queue_wait = int(cfg.get("build_timeout_seconds") or 3600)
+    try:
+        await asyncio.wait_for(build_slots.acquire(), queue_wait)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=429, detail="Image builds are still busy - try again in a few minutes",
                             headers={"Retry-After": "60"})
-    workdir = docker_build.new_workdir()
-    archive = workdir / "upload.zip"
+    loop = asyncio.get_running_loop()
+    released = False
+    release_lock = threading.Lock()
+
+    def release_build_slot() -> None:
+        nonlocal released
+        with release_lock:
+            if released:
+                return
+            released = True
+        loop.call_soon_threadsafe(build_slots.release)
+
+    workdir = None
     started = False
     try:
+        workdir = docker_build.new_workdir()
+        archive = workdir / "upload.zip"
         size = 0
         head = b""
         with archive.open("wb") as handle:
@@ -192,16 +218,24 @@ async def build_and_push(
         if not head.startswith(b"PK"):
             raise HTTPException(status_code=422, detail="The file is not a ZIP archive")
         repository = docker_registry.repository_path(cfg, image)
-        job = docker_build.BuildJob(cfg, archive, workdir, repository, tag, dockerfile_rel.as_posix(), access["who"])
+        job = docker_build.BuildJob(
+            cfg, archive, workdir, repository, tag, dockerfile_rel.as_posix(), access["who"],
+            on_finished=release_build_slot,
+        )
         log.info("Docker build %s requested by %s (%s), %d bytes", job.reference, access["who"], client_ip(request), size)
-        # From here the job owns the slot and the work directory and always releases both.
-        threading.Thread(target=job.run, name=f"docker-build-{repository}", daemon=True).start()
+        # The job owns the slot and the work directory from here and releases both when it finishes.
         started = True
+        try:
+            threading.Thread(target=job.run, name=f"docker-build-{repository}", daemon=True).start()
+        except Exception:
+            started = False
+            raise
     except ClientDisconnect:
         raise HTTPException(status_code=400, detail="Upload cancelled")
     finally:
         if not started:
-            shutil.rmtree(workdir, ignore_errors=True)
-            docker_build.release_slot()
+            if workdir is not None:
+                shutil.rmtree(workdir, ignore_errors=True)
+            release_build_slot()
     return StreamingResponse(_event_stream(job), media_type="text/event-stream",
                              headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})

@@ -14,9 +14,11 @@ from typing import Dict, Iterable, List, Optional
 from sqlalchemy import select
 
 from . import config, icons
-from .db import AppOverride, DevStack, PlatformLink, get_setting, session_scope, set_setting
+from .db import Action, AppOverride, DevStack, PlatformLink, RepositoryLink, get_setting, session_scope, set_setting
 from .knowledge import CATEGORIES, match_known_app, normalize_key
-from .models import AppEntry, Bundle, Catalog, Category, Platform, ScanResult, ScanStatus
+from .models import (
+    ActionItem, AppEntry, Bundle, Catalog, Category, DocPointer, Platform, Repository, ScanResult, ScanStatus,
+)
 from .scanner import human_size, read_json, scan_share, with_files
 
 log = logging.getLogger("pakal.store")
@@ -142,6 +144,13 @@ class CatalogStore:
             path = self._result.folder_icons.get(app_id)
         return Path(path) if path else None
 
+    def software_docs(self, app_id: str) -> List[DocPointer]:
+        with self._state_lock:
+            docs = self._result.docs.get(app_id)
+        if docs is None:
+            return []
+        return list(docs.files)
+
     def invalidate_view(self) -> None:
         with self._state_lock:
             self._generation += 1
@@ -156,6 +165,10 @@ class CatalogStore:
             stacks = list(session.scalars(select(DevStack).order_by(DevStack.sort_order, DevStack.name_en)))
             platform_rows = list(session.scalars(select(PlatformLink).order_by(PlatformLink.sort_order,
                                                                                PlatformLink.id)))
+            repo_rows = list(session.scalars(select(RepositoryLink).order_by(RepositoryLink.sort_order,
+                                                                             RepositoryLink.id)))
+            action_rows = list(session.scalars(
+                select(Action).where(Action.enabled.is_(True)).order_by(Action.sort_order, Action.key)))
         apps = [a for a in (apply_override(app, overrides.get(app.id)) for app in result.apps) if a]
         apps.sort(key=lambda a: a.name.lower())
         counts: Dict[str, int] = {}
@@ -165,10 +178,21 @@ class CatalogStore:
             id=row.id, name=row.name, url=row.url, description_he=row.description_he,
             description_en=row.description_en, icon=row.icon, icon_url=platform_icon_url(row), color=row.color,
         ) for row in platform_rows]
+        repositories = [Repository(
+            id=row.id, name=row.name, tech=row.tech, url=row.url, description_he=row.description_he,
+            description_en=row.description_en, icon=row.icon, color=row.color, sort_order=row.sort_order,
+        ) for row in repo_rows]
+        actions = [ActionItem(
+            key=row.key, builtin=row.builtin, kind=row.kind, name_he=row.name_he, name_en=row.name_en,
+            description_he=row.description_he, description_en=row.description_en, icon=row.icon,
+            target=row.target, chips=list(row.chips or []), english=row.english, sort_order=row.sort_order,
+        ) for row in action_rows]
         return Catalog(
             apps=apps,
             bundles=_resolve_stacks(stacks, apps),
             platforms=platforms,
+            repositories=repositories,
+            actions=actions,
             categories=[Category(id=cid, label_he=he, label_en=en,
                                  count=len(apps) if cid == "all" else counts.get(cid, 0))
                         for cid, he, en in CATEGORIES],

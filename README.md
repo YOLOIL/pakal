@@ -236,7 +236,7 @@ All variables are documented in [`.env.example`](.env.example). The most importa
 | `LDAP_URL`, `LDAP_SEARCH_BASE`, `LDAP_ADMIN_GROUP_DN` ... | Directory sign-in and admin group | `ldap://dc01.example.com:389` |
 | `NEXUS_URL`, `NEXUS_*_REPO` | Artifact uploader targets | `https://nexus.example.com` |
 | `NEXUS_DOCKER_REGISTRY` | Docker catalog & build push target | `nexus.example.com:5000` |
-| `DOCKER_BUILD_ADMIN_ONLY` | Restrict image builds to admins | `true` |
+| `DOCKER_BUILD_ADMIN_ONLY` | Legacy flag, no longer enforced. Any signed-in user can build | `false` |
 
 > Integration values (Keycloak, LDAP, Nexus, Docker) only **seed** the admin console. Once saved
 > in the console they are stored in the database and take precedence.
@@ -289,10 +289,11 @@ All variables are documented in [`.env.example`](.env.example). The most importa
 
 | Area | Endpoints |
 |---|---|
-| Catalog | `GET /api/apps`, `GET /api/apps/{id}`, `GET /api/icon/{id}`, `GET /api/download/{path}`, `GET /api/bundles/{id}/download-zip`, `GET /api/ui`, `GET /api/status`, `GET /api/health` |
+| Catalog | `GET /api/apps`, `GET /api/apps/{id}`, `GET /api/software/{id}/docs`, `GET /api/software/{id}/readme`, `GET /api/software/{id}/license`, `GET /api/icon/{id}`, `GET /api/download/{path}`, `GET /api/bundles/{id}/download-zip`, `GET /api/ui`, `GET /api/status`, `GET /api/health` |
 | Auth | `GET /api/auth/sso/login`, `GET /api/auth/sso/callback`, `POST /api/auth/ldap/login`, `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/feedback` |
-| Actions | `GET /api/actions/config`, `PUT /api/actions/upload` |
+| Actions | `GET /api/actions/config`, `GET /api/actions/powershell`, `PUT /api/actions/upload` |
 | Docker | `GET /api/docker/config`, `GET /api/docker/images`, `GET /api/docker/image`, `POST /api/docker/build-and-push` *(SSE stream)* |
+| PyPI | `GET /api/pypi/packages?q=`, `GET /api/pypi/download?path=` |
 | Admin | `/api/admin/*` (session + admin role required), `PUT /api/manage/apps/{id}/files` |
 
 State-changing requests must send the `X-PAKAL-Request: 1` header (CSRF protection).
@@ -305,7 +306,7 @@ State-changing requests must send the `X-PAKAL-Request: 1` header (CSRF protecti
 |---|---|
 | **Secrets** | Real values live only in `.env` (git-ignored, `chmod 600`). The code ships **no default passwords or hashes** - without `ADMIN_PASSWORD_HASH` the emergency login is disabled. Integration secrets saved in the console are stored server-side and never returned to the browser. |
 | **RBAC** | Admin rights come from the Keycloak admin role or the LDAP admin group. The console is served only at `ADMIN_SECURE_PATH`; `/admin` returns 404 and admin responses carry `noindex`. |
-| **Docker socket** | Access to `/var/run/docker.sock` is **root-equivalent on the host**. Builds are **admin-only by default** (`DOCKER_BUILD_ADMIN_ONLY=true`) - relax this only if every signed-in user is trusted. The container itself runs as a non-root user that only joins the socket group. Build contexts are size-limited, extracted safely (no path traversal or symlink escapes) and deleted after each job. |
+| **Docker socket** | Access to `/var/run/docker.sock` is **root-equivalent on the host**. Any signed-in user can start a build. The container itself runs as a non-root user that only joins the socket group. Build contexts are size-limited, extracted safely (no path traversal or symlink escapes) and deleted after each job. |
 | **Web hardening** | Strict Content-Security-Policy (`'self'` only), `X-Frame-Options: DENY`, `nosniff`, same-origin referrer and opener policies, sandboxed CSP for user-uploaded content, CSRF header on every mutation, rate-limited logins, secure cookies behind TLS. |
 | **Uploads** | Package type, metadata and size are validated server-side before anything is forwarded to Nexus. |
 | **Emergency access** | Follow [`EMERGENCY_ADMIN_README.md`](EMERGENCY_ADMIN_README.md). Keep the emergency password in the team vault, audit `Admin login (local)` log lines after use, and rotate the password whenever it may have been shared. |

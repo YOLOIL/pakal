@@ -22,8 +22,10 @@ SETTING_KEY = "ui.visibility"
 ELEMENTS: Tuple[Tuple[str, str], ...] = (
     ("tab_bundles", "tabs"),
     ("tab_platforms", "tabs"),
+    ("tab_repos", "tabs"),
     ("tab_actions", "tabs"),
     ("tab_docker", "tabs"),
+    ("tab_pypi", "tabs"),
     ("btn_sync", "header"),
     ("btn_language", "header"),
     ("btn_theme", "header"),
@@ -34,6 +36,7 @@ ELEMENTS: Tuple[Tuple[str, str], ...] = (
     ("btn_homepage", "content"),
     ("upload_repo_override", "content"),
     ("docker_build", "content"),
+    ("guide", "onboarding"),
 )
 DEFAULTS: Dict[str, bool] = {key: True for key, _group in ELEMENTS}
 

@@ -43,8 +43,8 @@
       <h1 data-i18n="loginTitle"></h1>
       <p data-i18n="loginSubtitle"></p>
       <div class="form">
-        <label class="field"><span data-i18n="username"></span><input class="input" name="username" autocomplete="username" dir="ltr" required maxlength="128"></label>
-        <label class="field"><span data-i18n="password"></span><input class="input" name="password" type="password" autocomplete="current-password" dir="ltr" required maxlength="256"></label>
+        <label class="field form-group"><span data-i18n="username"></span><input class="input" name="username" autocomplete="username" dir="ltr" required maxlength="128"></label>
+        <label class="field form-group"><span data-i18n="password"></span><input class="input" name="password" type="password" autocomplete="current-password" dir="ltr" required maxlength="256"></label>
         <div class="form-error" id="login-error" role="alert"></div>
         <button class="btn btn-primary btn-lg btn-block" type="submit" data-i18n="signIn"></button>
         <p class="login-hint" data-i18n="loginHint"></p>
@@ -54,13 +54,15 @@
     </form>
   </div>
 
-  <div class="admin-shell" id="shell" hidden>
+  <div class="admin-shell" id="shell" dir="rtl" hidden>
     <aside class="sidebar">
       <div class="sidebar-label" data-i18n="manage"></div>
       <button class="side-item" type="button" data-view="overview"><span data-icon="activity"></span><span data-i18n="navOverview"></span></button>
       <button class="side-item" type="button" data-view="apps"><span data-icon="grid"></span><span data-i18n="navApps"></span><span class="count" id="count-apps"></span></button>
       <button class="side-item" type="button" data-view="stacks"><span data-icon="layers"></span><span data-i18n="navStacks"></span><span class="count" id="count-stacks"></span></button>
       <button class="side-item" type="button" data-view="platforms"><span data-icon="globe"></span><span data-i18n="navPlatforms"></span><span class="count" id="count-platforms"></span></button>
+      <button class="side-item" type="button" data-view="repos"><span data-icon="package"></span><span data-i18n="navRepos"></span><span class="count" id="count-repos"></span></button>
+      <button class="side-item" type="button" data-view="actions"><span data-icon="sliders"></span><span data-i18n="navActions"></span><span class="count" id="count-actions"></span></button>
       <div class="sidebar-label" data-i18n="engage"></div>
       <button class="side-item" type="button" data-view="feedback"><span data-icon="message"></span><span data-i18n="navFeedback"></span><span class="count-badge" id="count-feedback" hidden></span></button>
       <div class="sidebar-label" data-i18n="system"></div>

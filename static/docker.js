@@ -715,7 +715,7 @@
     const cfg = state.config;
     if (!cfg || !cfg.build || !cfg.build.visible || !cfg.configured) return { show: false };
     const reason = cfg.build.reason;
-    if (reason === "disabled" || reason === "not_configured" || reason === "admin_only") return { show: false };
+    if (reason === "disabled" || reason === "not_configured") return { show: false };
     return { show: true, allowed: cfg.build.allowed, reason, engine: cfg.build.engine };
   }
 
@@ -731,7 +731,6 @@
     const base = { loaded: true, visible: Boolean(build.visible) };
     if (!cfg.configured || build.reason === "not_configured") return { ...base, available: false, status: "Registry not configured", tone: "warn" };
     if (build.reason === "disabled") return { ...base, available: false, status: "Disabled by the administrator", tone: "muted" };
-    if (build.reason === "admin_only") return { ...base, available: false, status: "Administrators only", tone: "muted" };
     const s = b();
     if (BUSY.has(s.status)) return { ...base, available: true, status: `Build running · ${statusLine()}`, tone: "busy" };
     if (build.reason === "sign_in") return { ...base, available: true, status: "Sign in to build", tone: "warn" };
@@ -893,7 +892,6 @@
     }
     const reason = cfg.build && cfg.build.reason;
     if (!cfg.configured || reason === "not_configured") return emptyState("The Docker registry is not configured", t("notConfiguredText"), "container");
-    if (reason === "admin_only") return emptyState("Administrators only", "Image builds run on the host Docker engine, so they are restricted to administrators.", "lock");
     if (reason === "disabled") return emptyState("Image builds are disabled", "An administrator turned off the Docker Image Builder in the admin console.", "container");
     return emptyState("The Docker Image Builder is hidden", "An administrator hid this tool in the portal interface settings.", "eyeOff");
   }

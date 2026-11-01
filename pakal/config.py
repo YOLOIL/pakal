@@ -47,6 +47,8 @@ UPLOADS_DIR = DATA_DIR / "uploads"
 AUTO_RESCAN_MINUTES = _env_int("AUTO_RESCAN_MINUTES", 30)
 INITIAL_SCAN_WAIT_SECONDS = _env_float("INITIAL_SCAN_WAIT_SECONDS", 20)
 MAX_SCAN_DEPTH = _env_int("MAX_SCAN_DEPTH", 2)
+# How deep to descend through vendor/grouping folders (e.g. microsoft/visual studio) looking for app roots.
+MAX_VENDOR_DEPTH = _env_int("MAX_VENDOR_DEPTH", 3)
 PAYLOAD_THRESHOLD = _env_int("PAYLOAD_THRESHOLD", 15)
 
 INSTALLER_EXTENSIONS: Tuple[str, ...] = tuple(
@@ -158,6 +160,13 @@ NEXUS_PASSWORD = os.environ.get("NEXUS_PASSWORD", "")
 NEXUS_PYPI_REPO = _env_str("NEXUS_PYPI_REPO")
 NEXUS_NPM_REPO = _env_str("NEXUS_NPM_REPO")
 NEXUS_POWERSHELL_REPO = _env_str("NEXUS_POWERSHELL_REPO")
+# PowerShell 7 / NuGet bootstrap shown on the Actions hub. Blank repository URL is derived from
+# NEXUS_URL plus the first PowerShell repository. NUGET_EXE_PATH overrides the share default.
+DEFAULT_NUGET_EXE_PATH = r"\\na-nas-01\support$\Applications\nuget\nuget.exe"
+NUGET_EXE_PATH = _env_str("NUGET_EXE_PATH", DEFAULT_NUGET_EXE_PATH) or DEFAULT_NUGET_EXE_PATH
+PS_REPOSITORY_NAME = _env_str("PS_REPOSITORY_NAME", "NexusPS") or "NexusPS"
+PS_REPOSITORY_URL = _env_str("PS_REPOSITORY_URL")
+POWERSHELL7_URL = _env_str("POWERSHELL7_URL")
 NEXUS_TLS_INSECURE = _env_bool("NEXUS_TLS_INSECURE", True)
 NEXUS_CHECK_EXISTING = _env_bool("NEXUS_CHECK_EXISTING", True)
 NEXUS_MAX_UPLOAD_MB = _env_int("NEXUS_MAX_UPLOAD_MB", 1024)
@@ -171,11 +180,14 @@ NEXUS_DOCKER_USERNAME = _env_str("NEXUS_DOCKER_USERNAME")
 NEXUS_DOCKER_PASSWORD = os.environ.get("NEXUS_DOCKER_PASSWORD", "")
 NEXUS_DOCKER_NAMESPACE = _env_str("NEXUS_DOCKER_NAMESPACE")
 DOCKER_BUILD_ENABLED = _env_bool("DOCKER_BUILD_ENABLED", True)
-DOCKER_BUILD_ADMIN_ONLY = _env_bool("DOCKER_BUILD_ADMIN_ONLY", True)
+# Kept for older admin-console saves. The build route no longer consults it: any signed-in user may build.
+DOCKER_BUILD_ADMIN_ONLY = _env_bool("DOCKER_BUILD_ADMIN_ONLY", False)
 DOCKER_MAX_CONTEXT_MB = _env_int("DOCKER_MAX_CONTEXT_MB", 2048)
 DOCKER_BUILD_TIMEOUT_SECONDS = _env_int("DOCKER_BUILD_TIMEOUT_SECONDS", 3600)
 # Host engine endpoint: a unix socket path (mounted from the host) or tcp://host:2375 for development.
 DOCKER_SOCKET = _env_str("DOCKER_SOCKET", "/var/run/docker.sock")
+# Kept so older compose files still parse. Image builds queue on asyncio.Semaphore(2)
+# in routes_docker; that handler does not raise the cap above two.
 DOCKER_MAX_CONCURRENT_BUILDS = max(1, _env_int("DOCKER_MAX_CONCURRENT_BUILDS", 2))
 DOCKER_BUILD_DIR = DATA_DIR / "docker-builds"
 

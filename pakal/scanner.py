@@ -6,6 +6,7 @@ Share layout:
     <APPS_ROOT>/<AppName>/<version|os>/<installer>     up to MAX_SCAN_DEPTH folder levels
     <APPS_ROOT>/<AppName>/info.json                    optional metadata
     <APPS_ROOT>/<AppName>/icon.png                     optional custom icon
+    <APPS_ROOT>/<AppName>/README* and LICENSE*         optional docs, also inside a zip
 
 Only primary installers are indexed. Clutter directories are never entered, offline layouts and
 payload directories collapse into a single launcher (plus ISOs) that carries the total bundle size.
@@ -27,7 +28,8 @@ from .knowledge import (
     ALIAS_MAP, BUILTIN_APP_ICONS, CORE_APP_KEYS, KNOWN_APPS, category_labels, guess_category, match_known_app,
     normalize_key, resolve_category,
 )
-from .models import AppEntry, AppFile, Release, ScanResult
+from .models import AppEntry, AppFile, Release, ScanResult, SoftwareDocs
+from .software_docs import find_software_docs
 
 log = logging.getLogger("pakal.scanner")
 
@@ -241,6 +243,85 @@ def is_ignored_dir(name: str) -> bool:
         or "," in lower
         or bool(_HASH_NAME_RE.match(lower))
     )
+
+
+# A child folder that is a version / architecture / OS / layout folder of its parent app
+# (e.g. "2022", "17.8.3", "x64", "win64", "payloads"), not a distinct nested application.
+_VERSIONISH_DIR_RE = re.compile(
+    r"(?i)^(?:"
+    r"v(?:er|ersion)?[ ._-]?\d[\w.]*"
+    r"|\d+(?:[._]\d+)*[a-z]?"
+    r"|(?:x86[_-]?64|amd64|arm64|aarch64|win32|win64|x64|x86|i[3-6]86|(?:32|64)[ _-]?bit)"
+    r"|win(?:dows)?(?:[ _-]?(?:xp|7|8|10|11))?"
+    r"|linux|mac(?:os)?|osx|darwin|universal|portable|offline|online|full|standalone|setup"
+    r")$"
+)
+
+
+def _is_version_like_dir(name: str, parent_tokens: Sequence[str]) -> bool:
+    """True when *name* is a version/arch/OS/layout folder of its app rather than a separate app."""
+    low = name.strip().lower()
+    if is_ignored_dir(name) or low in LAYOUT_DIR_NAMES or low in EXTRACTED_APP_DIR_NAMES:
+        return True
+    if _VERSIONISH_DIR_RE.match(low):
+        return True
+    # "Visual Studio 2022" beneath a "Visual Studio" folder: strip the parent's name, then re-judge.
+    residue = normalize_key(name)
+    for token in parent_tokens:
+        if token and len(token) >= 3 and token in residue:
+            residue = residue.replace(token, "")
+    if not residue:
+        return True
+    return bool(re.fullmatch(r"(?:ver|version|x64|x86|amd64|arm64|win|win32|win64|v|\d)+", residue))
+
+
+def _has_direct_installer(entries: List[os.DirEntry]) -> bool:
+    for entry in entries:
+        try:
+            if entry.is_file(follow_symlinks=False) and is_primary_candidate(entry.name):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def iter_app_roots(path: Path, depth: int = 0) -> List[Path]:
+    """Application roots under *path*.
+
+    Descends through vendor/grouping folders (e.g. ``microsoft`` -> ``microsoft/visual studio``) so nested
+    applications become their own catalog entries, while version/OS folders stay part of a single app.
+    """
+    try:
+        with os.scandir(path) as it:
+            entries = list(it)
+    except OSError as exc:
+        log.warning("Cannot read %s: %s", path, exc)
+        return []
+
+    # A folder with installers sitting directly inside it is itself an application.
+    if _has_direct_installer(entries):
+        return [path]
+
+    parent_tokens = [normalize_key(path.name)]
+    subdirs: List[os.DirEntry] = []
+    for entry in entries:
+        try:
+            if entry.is_dir(follow_symlinks=False) and not is_ignored_dir(entry.name) \
+                    and not entry.name.startswith(("_", "$", "#", "@")):
+                subdirs.append(entry)
+        except OSError:
+            continue
+
+    app_children = [d for d in subdirs if not _is_version_like_dir(d.name, parent_tokens)]
+    # No distinctly-named children (only version/OS folders), or the vendor nesting is too deep:
+    # treat this folder as one application and let walk_app() gather its versioned installers.
+    if not app_children or depth >= config.MAX_VENDOR_DEPTH:
+        return [path]
+
+    roots: List[Path] = []
+    for child in app_children:
+        roots.extend(iter_app_roots(Path(child.path), depth + 1))
+    return roots
 
 
 def read_json(path: Path) -> Optional[Any]:
@@ -484,13 +565,19 @@ def _resolve_icon(app_id: str, folder_icon: Optional[Path], files: List[AppFile]
     return None, None
 
 
-def build_app(app_dir: Path, used_ids: set) -> Optional[Tuple[AppEntry, Optional[Path]]]:
+def build_app(app_dir: Path, used_ids: set):
     raw_meta = read_json(app_dir / "info.json")
     meta: Dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
 
-    folder = app_dir.name
-    name = str(meta.get("name") or folder).strip()
-    known_key = match_known_app(folder) or match_known_app(name)
+    # folder is the path relative to APPS_ROOT ("microsoft/visual studio" for a nested app), so uploads,
+    # downloads and docs resolve correctly; the display name defaults to the leaf folder.
+    try:
+        folder = app_dir.relative_to(config.APPS_ROOT).as_posix()
+    except ValueError:
+        folder = app_dir.name
+    leaf = app_dir.name
+    name = str(meta.get("name") or leaf).strip()
+    known_key = match_known_app(leaf) or match_known_app(name)
     known = KNOWN_APPS.get(known_key) if known_key else None
 
     files = _collect_files(app_dir, name, known_key)
@@ -509,7 +596,7 @@ def build_app(app_dir: Path, used_ids: set) -> Optional[Tuple[AppEntry, Optional
         tags = list(known[3]) if known else []
     tags = [str(t).strip() for t in tags if str(t).strip()][:8]
 
-    app_id = slugify(folder)
+    app_id = slugify(leaf if "/" not in folder else folder.replace("/", "-"))
     base_id, counter = app_id, 2
     while app_id in used_ids:
         app_id = f"{base_id}-{counter}"
@@ -537,12 +624,18 @@ def build_app(app_dir: Path, used_ids: set) -> Optional[Tuple[AppEntry, Optional
         featured=bool(featured) if featured is not None else (known_key in CORE_APP_KEYS),
         known_key=known_key,
     )
-    return with_files(entry, files), folder_icon
+    try:
+        docs = find_software_docs(app_dir, config.APPS_ROOT)
+    except OSError as exc:
+        log.warning("Docs: skipping %s: %s", app_dir, exc)
+        docs = None
+    return with_files(entry, files), folder_icon, docs
 
 
 def scan_share() -> ScanResult:
     apps: List[AppEntry] = []
     folder_icons: Dict[str, str] = {}
+    docs_map: Dict[str, SoftwareDocs] = {}
     used_ids: set = set()
     root = config.APPS_ROOT
     root_available = root.is_dir()
@@ -552,25 +645,36 @@ def scan_share() -> ScanResult:
         return ScanResult(root_available=False)
 
     try:
-        app_dirs = sorted((p for p in root.iterdir() if p.is_dir()), key=lambda p: p.name.lower())
+        top_level = sorted((p for p in root.iterdir() if p.is_dir()), key=lambda p: p.name.lower())
     except OSError as exc:
         raise RuntimeError(f"Cannot read apps root {root}: {exc}") from exc
 
-    for app_dir in app_dirs:
-        if is_ignored_dir(app_dir.name) or app_dir.name.startswith(("_", "$", "#", "@")):
+    # Expand vendor/grouping folders (e.g. microsoft/) into their nested application roots.
+    app_dirs: List[Path] = []
+    for top in top_level:
+        if is_ignored_dir(top.name) or top.name.startswith(("_", "$", "#", "@")):
             continue
+        try:
+            app_dirs.extend(iter_app_roots(top))
+        except OSError as exc:
+            log.warning("Skipping %s: %s", top, exc)
+    app_dirs.sort(key=lambda p: p.as_posix().lower())
+
+    for app_dir in app_dirs:
         try:
             built = build_app(app_dir, used_ids)
         except OSError as exc:
             log.warning("Skipping %s: %s", app_dir, exc)
             continue
         if built:
-            entry, folder_icon = built
+            entry, folder_icon, docs = built
             apps.append(entry)
             if folder_icon:
                 folder_icons[entry.id] = str(folder_icon)
+            if docs and docs.files:
+                docs_map[entry.id] = docs
 
     apps.sort(key=lambda a: a.name.lower())
     icons.prune_extracted(a.icon_url.rsplit("/", 1)[-1] for a in apps
                           if a.icon_source in ("exe", "msi") and a.icon_url)
-    return ScanResult(apps=apps, folder_icons=folder_icons, root_available=True)
+    return ScanResult(apps=apps, folder_icons=folder_icons, docs=docs_map, root_available=True)

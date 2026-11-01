@@ -8,8 +8,10 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .knowledge import CATEGORY_IDS
+from .knowledge import CATEGORY_IDS, REPO_TECHS
 from .security import clean_text
+
+ACTION_KINDS = ("link", "download")
 
 _COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _ICON_RE = re.compile(r"^[a-z0-9-]{1,40}$")
@@ -109,6 +111,134 @@ class PlatformOut(BaseModel):
     icon_file: Optional[str] = None
     favicon_file: Optional[str] = None
     icon_url: Optional[str] = None
+
+
+class RepositoryIn(StrictModel):
+    name: str = Field(max_length=200)
+    tech: str = "other"
+    url: str = Field(default="", max_length=600)
+    description_he: str = Field(default="", max_length=1000)
+    description_en: str = Field(default="", max_length=1000)
+    icon: str = "package"
+    color: str = "#6366F1"
+    sort_order: Optional[int] = Field(default=None, ge=0, le=9999)
+
+    @field_validator("name")
+    @classmethod
+    def v_name(cls, value: str) -> str:
+        return _required(value, 100)
+
+    @field_validator("tech")
+    @classmethod
+    def v_tech(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in REPO_TECHS:
+            raise ValueError(f"Unknown repository type (allowed: {', '.join(REPO_TECHS)})")
+        return value
+
+    @field_validator("url")
+    @classmethod
+    def v_url(cls, value: str) -> str:
+        value = clean_text(value, 500)
+        return validate_url(value) if value else ""
+
+    @field_validator("description_he", "description_en")
+    @classmethod
+    def v_description(cls, value: str) -> str:
+        return clean_text(value, 300)
+
+    @field_validator("icon")
+    @classmethod
+    def v_icon(cls, value: str) -> str:
+        return _icon(value)
+
+    @field_validator("color")
+    @classmethod
+    def v_color(cls, value: str) -> str:
+        return _color(value)
+
+
+class RepositoryOut(BaseModel):
+    id: int
+    name: str
+    tech: str
+    url: str
+    description_he: str
+    description_en: str
+    icon: str
+    color: str
+    sort_order: int
+
+
+class ActionSaveIn(StrictModel):
+    """One model for create and update. Built-in actions ignore kind/target (enforced in the route)."""
+
+    kind: str = "link"
+    name_he: str = Field(default="", max_length=400)
+    name_en: str = Field(default="", max_length=400)
+    description_he: str = Field(default="", max_length=1200)
+    description_en: str = Field(default="", max_length=1200)
+    icon: str = "sliders"
+    target: str = Field(default="", max_length=600)
+    chips: List[str] = Field(default_factory=list, max_length=8)
+    english: bool = False
+    enabled: bool = True
+    sort_order: Optional[int] = Field(default=None, ge=0, le=9999)
+
+    @field_validator("kind")
+    @classmethod
+    def v_kind(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in ACTION_KINDS:
+            raise ValueError("kind must be 'link' or 'download'")
+        return value
+
+    @field_validator("name_he", "name_en")
+    @classmethod
+    def v_names(cls, value: str) -> str:
+        return clean_text(value, 120)
+
+    @field_validator("description_he", "description_en")
+    @classmethod
+    def v_description(cls, value: str) -> str:
+        return clean_text(value, 400)
+
+    @field_validator("icon")
+    @classmethod
+    def v_icon(cls, value: str) -> str:
+        return _icon(value)
+
+    @field_validator("chips")
+    @classmethod
+    def v_chips(cls, value: List[str]) -> List[str]:
+        return [chip for chip in (clean_text(item, 24) for item in value) if chip][:8]
+
+    @field_validator("target")
+    @classmethod
+    def v_target(cls, value: str) -> str:
+        value = clean_text(value, 500)
+        if not value:
+            return ""
+        # Allow an absolute http(s) URL or a safe root-relative path (e.g. /api/tools/setup-nuget.cmd).
+        if value.startswith("/") and not value.startswith("//") and ".." not in value and ":" not in value:
+            return value
+        return validate_url(value)
+
+
+class ActionOut(BaseModel):
+    key: str
+    builtin: str
+    kind: str
+    name_he: str
+    name_en: str
+    description_he: str
+    description_en: str
+    icon: str
+    target: str
+    chips: List[str]
+    english: bool
+    enabled: bool
+    sort_order: int
 
 
 class StackIn(StrictModel):
@@ -532,7 +662,7 @@ class DockerSettingsIn(StrictModel):
     namespace: str = Field(default="", max_length=120)
     tls_insecure: bool
     build_enabled: bool
-    build_admin_only: bool
+    build_admin_only: bool = False
     max_context_mb: int = Field(ge=1, le=20480)
     build_timeout_seconds: int = Field(ge=60, le=86400)
 
@@ -566,6 +696,41 @@ class DockerSettingsIn(StrictModel):
         return value
 
 
+class PowershellSettingsIn(StrictModel):
+    nuget_exe_path: str = Field(default="", max_length=500)
+    repository_name: str = Field(default="NexusPS", max_length=40)
+    repository_url: str = Field(default="", max_length=300)
+    powershell7_url: str = Field(default="", max_length=300)
+
+    @field_validator("nuget_exe_path")
+    @classmethod
+    def v_nuget(cls, value: str) -> str:
+        value = value.strip().replace("/", "\\")
+        if not value:
+            return ""
+        if any(ord(c) < 32 for c in value):
+            raise ValueError("Invalid path")
+        parts = [part for part in value[2:].split("\\")] if value.startswith("\\\\") else []
+        parts = [part for part in parts if part != ""]
+        if len(parts) < 3 or any(part in (".", "..") for part in parts) or not parts[-1].lower().endswith(".exe"):
+            raise ValueError(r"Enter a UNC path such as \\files.example.com\share\nuget.exe")
+        return "\\\\" + "\\".join(parts)
+
+    @field_validator("repository_name")
+    @classmethod
+    def v_repo_name(cls, value: str) -> str:
+        value = value.strip() or "NexusPS"
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{0,39}", value):
+            raise ValueError("Repository name must start with a letter")
+        return value
+
+    @field_validator("repository_url", "powershell7_url")
+    @classmethod
+    def v_optional_url(cls, value: str) -> str:
+        value = value.strip()
+        return validate_endpoint(value).rstrip("/") if value else ""
+
+
 AUTH_SECTION_MODELS = {
     "keycloak": KeycloakSettingsIn,
     "ldap_server": LdapServerIn,
@@ -575,6 +740,7 @@ AUTH_SECTION_MODELS = {
     "local_admin": LocalAdminIn,
     "nexus": NexusSettingsIn,
     "docker": DockerSettingsIn,
+    "powershell": PowershellSettingsIn,
 }
 
 

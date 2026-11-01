@@ -329,6 +329,50 @@ def reachable(cfg: Dict[str, Any]) -> bool:
     return ok
 
 
+_warm_lock = threading.Lock()
+_warming: set = set()
+
+
+def _warm_probe(cfg: Dict[str, Any], key: str, url: str) -> None:
+    """Refresh the reachability cache off the request path (never blocks /api/auth/me)."""
+    with _warm_lock:
+        if key in _warming:
+            return
+        _warming.add(key)
+
+    def run() -> None:
+        try:
+            ok = probe_url(cfg, url)["status"] is not None
+            _probe_cache[key] = (time.monotonic(), ok)
+        except Exception:  # noqa: BLE001 - a warm probe must never crash a background thread
+            log.exception("SSO reachability warm probe failed")
+        finally:
+            with _warm_lock:
+                _warming.discard(key)
+
+    threading.Thread(target=run, name="sso-reach-warm", daemon=True).start()
+
+
+def reachable_hint(cfg: Dict[str, Any]) -> bool:
+    """Non-blocking reachability for the sign-in / silent-login decision.
+
+    Uses a fresh cached probe when available; otherwise it assumes Keycloak is reachable and refreshes the
+    cache in the background. A slow or flaky probe therefore never suppresses a silent login or the sign-in
+    button - only a *confirmed* recent failure does. The one-shot silent-login guard in the browser stops any
+    redirect loop if Keycloak is genuinely down.
+    """
+    url = cfg.get("endpoints", {}).get("auth", "")
+    if not url:
+        return False
+    key = f"{url}|{cfg.get('tls_insecure')}"
+    cached = _probe_cache.get(key)
+    now = time.monotonic()
+    if cached and now - cached[0] < _PROBE_TTL:
+        return cached[1]
+    _warm_probe(cfg, key, url)
+    return True
+
+
 def clear_probe_cache() -> None:
     _probe_cache.clear()
 

@@ -3,14 +3,15 @@
 
   const { esc, icon, appIcon, debounce, toast } = window.PAKAL;
   const API = { apps: "/api/apps", status: "/api/status", ui: "/api/ui", actions: "/api/actions/config" };
-  const VIEWS = ["home", "apps", "bundles", "platforms", "docker", "actions"];
-  const VIEW_TOGGLES = { bundles: "tab_bundles", platforms: "tab_platforms", docker: "tab_docker", actions: "tab_actions" };
+  const VIEWS = ["home", "apps", "bundles", "platforms", "repos", "pypi", "docker", "actions"];
+  const VIEW_TOGGLES = { bundles: "tab_bundles", platforms: "tab_platforms", repos: "tab_repos", pypi: "tab_pypi", docker: "tab_docker", actions: "tab_actions" };
   const UPLOAD_CONCURRENCY = 3;
   const SCAN_POLL_MS = 1500;
   const LIVE_SYNC_MS = 30000;
   const EXPECT_CHANGE_MS = 25000;
   const UI_REFRESH_TICKS = 4;
   const ANNOUNCEMENT_KEY = "pakal.announcement.read";
+  const GUIDE_KEY = "pakal_guide_open";
 
   // ------------------------------------------------------------------- i18n
 
@@ -20,15 +21,42 @@
       brand: "פ.ק.ל",
       brandSub: "פורטל התוכנות והפיתוח",
       heroBrand: "פ.ק.ל",
+      actShown: "מוצג",
+      actHidden: "מוסתר",
+      actHiddenTag: "מוסתר למשתמשים",
+      actToggleTip: "לחץ להסתרה או הצגה של פעולה זו למשתמשים",
+      actNowHidden: "הפעולה הוסתרה מהמשתמשים",
+      actNowShown: "הפעולה מוצגת שוב למשתמשים",
+      actToggleFailed: "עדכון הנראות נכשל",
+      actNoneVisible: "אין כרגע פעולות זמינות.",
+      tourStart: "סיור במערכת",
+      heroSubtitle: "פלטפורמה ארגונית אחת לתוכנות, ערכות התקנה, מאגרי חבילות וכלי פיתוח בשירות עצמי.",
       heroTitle: "פורטל התוכנות והפיתוח",
       footerCredits: "נבנה ומתוחזק ב-❤️ על ידי צוות שרתים",
       themeToggle: "מצב תצוגה בהיר/כהה",
       syncLabel: "סנכרן / רענן",
       syncDone: (n) => `הקטלוג סונכרן מהשרת · ${n} תוכנות`,
       navHome: "סקירה",
+      navCatalog: "קטלוג תוכנות",
+      navRepos: "מאגרים",
       navApps: "מאגר התוכנות",
+      qsOpen: "חיפוש",
+      qsTitle: "חיפוש מהיר",
+      qsPlaceholder: "חיפוש תוכנה, גרסה או תגית…",
+      qsHint: "הקלידו כדי לחפש בפורטל",
+      qsEmpty: "אין תוצאות תואמות",
+      qsCatalog: "הצג את כל התוצאות בקטלוג",
       navStacks: "ערכות לפי תפקיד",
       navPlatforms: "פלטפורמות",
+      navRepos: "מאגרים",
+      reposSubtitle: "מאגרי הארטיפקטים ב-Nexus - דפדוף וגישה לפי סוג.",
+      noRepos: "טרם הוגדרו מאגרים.",
+      repoBrowse: "דפדוף במאגר",
+      repoNoUrl: "אין כתובת מוגדרת",
+      actOpen: "פתיחה",
+      actDownload: "הורדה",
+      repoTech_pypi: "PyPI", repoTech_npm: "npm", repoTech_nuget: "NuGet", repoTech_powershell: "PowerShell",
+      repoTech_docker: "Docker", repoTech_maven: "Maven", repoTech_apt: "APT", repoTech_raw: "Raw", repoTech_other: "אחר",
       admin: "ניהול",
       search: "חיפוש",
       clearSearch: "נקה חיפוש",
@@ -42,6 +70,26 @@
       sortName: "מיון לפי שם",
       sortUpdated: "עודכן לאחרונה",
       sortSize: "מיון לפי גודל",
+      fsVersionDesc: "גרסה (מהחדש לישן)",
+      fsVersionAsc: "גרסה (מהישן לחדש)",
+      fsDateDesc: "תאריך (מהחדש לישן)",
+      fsDateAsc: "תאריך (מהישן לחדש)",
+      fsNameAsc: "שם קובץ (א-ת)",
+      fsNameDesc: "שם קובץ (ת-א)",
+      folderItems: (n) => `${n} ${n === 1 ? "פריט" : "פריטים"}`,
+      folderBreadcrumb: "מיקום בתיקיות",
+      folderPick: "בחרו תת-תיקייה כדי לראות את הקבצים.",
+      guideTitle: "מדריך מהיר",
+      guideSub: "איך מתחילים לעבוד עם הפורטל",
+      guideToggle: "הצגה או הסתרה של המדריך",
+      guideIntro: "פ.ק.ל הוא חלון ראווה אחד לכל התוכנות, החבילות וכלי הפיתוח בארגון - הכול בשירות עצמי וללא הרשאות מנהל.",
+      guidePoints: [
+        "קטלוג תוכנות עם התקנות ב-1-Click וחיפוש מהיר מכל מקום.",
+        "מאגר Docker ארגוני ומאגר PyPI לחבילות Python.",
+        "לשונית פעולות: בניית אימג'ים, התקנת PowerShell 7 ו-NuGet והעלאת חבילות ל-Nexus.",
+        "ערכות כלים לפי תפקיד וקישורים לפלטפורמות הפנימיות.",
+      ],
+      guideTour: "התחלת סיור מודרך",
       coreTools: "כלים מרכזיים",
       recent: "עודכנו לאחרונה",
       viewAll: "הצג הכל",
@@ -63,11 +111,12 @@
       loadErrorTitle: "שגיאה בטעינת הקטלוג",
       retry: "נסה שוב",
       officialInstallers: "מתקינים רשמיים",
-      colFile: "קובץ",
+      colFile: "שם קובץ",
       colVersion: "גרסה",
-      colOs: "מערכת",
-      colDate: "תאריך",
+      colOs: "מערכת הפעלה",
       colSize: "גודל",
+      colDate: "תאריך",
+      colActions: "פעולות",
       latest: "אחרונה",
       noVersion: "ללא גרסה",
       bundleCtx: (size, n) => `חבילה מלאה · ${size} · ${n.toLocaleString()} קבצים`,
@@ -76,6 +125,30 @@
       updated: "עודכן",
       totalSize: "גודל כולל",
       homepage: "אתר הבית",
+      docsButton: "תיעוד ורישיון",
+      docsReadme: "README",
+      docsLicense: "רישיון",
+      docsCopy: "העתקה ללוח",
+      docsCopied: "הטקסט הועתק",
+      docsCopyFailed: "ההעתקה נכשלה",
+      docsLoading: "טוען תיעוד…",
+      docsError: "לא ניתן לטעון את התיעוד",
+      docsRetry: "נסו שוב",
+      docsGenerated: "הוראות התקנה",
+      docsMissing: "לא נמצא קובץ README בחבילה. להלן הוראות התקנה לפי פרטי החבילה.",
+      docsInstall: "התקנה",
+      docsStepDownload: (name) => `הורידו את ${name} מהפורטל`,
+      docsStepOpen: "פתחו את כרטיס הכלי והורידו את המתקין",
+      docsStepRun: "הריצו את המתקין ועקבו אחר ההנחיות",
+      docsStepDone: "הכלי זמין לאחר סיום ההתקנה",
+      docsVersion: (v) => `גרסה במאגר: ${v}`,
+      docsNoLicense: "לא נמצא קובץ רישיון בחבילה.",
+      docsTruncated: "הקובץ קוצר כי הוא ארוך מהמגבלה.",
+      docsCallout_note: "הערה",
+      docsCallout_tip: "טיפ",
+      docsCallout_important: "חשוב",
+      docsCallout_warning: "אזהרה",
+      docsCallout_caution: "זהירות",
       missingTools: (n) => `${n} לא זמינים במאגר`,
       moreTools: (n) => `ועוד ${n}`,
       noStackTools: "אף אחד מכלי הערכה לא נמצא במאגר",
@@ -111,6 +184,9 @@
       fbSuccess: "פנייתך התקבלה בהצלחה",
       fbRequired: "יש למלא נושא ותיאור",
       fbThrottled: "נשלחו פניות רבות מדי. נסו שוב בעוד מספר דקות.",
+      welcomeLead: "ברוך הבא",
+      welcomeUser: (n) => `ברוך הבא, ${n}`,
+      splashCaption: "טוען את סביבת PAKAL...",
       signIn: "התחברות",
       signOut: "התנתקות",
       reloginCountdown: (s) => `התנתקת מהמערכת. התחברות מחדש אוטומטית בעוד ${s} שניות…`,
@@ -127,11 +203,50 @@
       signedInAs: (n) => `שלום, ${n}`, signedOut: "התנתקת מהפורטל",
       signingOut: "מתנתק…",
       navActions: "פעולות",
+      navPypi: "מאגר PyPI",
       navDocker: "מאגר Docker",
+      pypiTitle: "מאגר PyPI",
+      pypiSubtitle: "חבילות Python מה-Nexus הארגוני. העתיקו פקודת התקנה או הורידו wheel.",
+      pypiSearch: "חיפוש חבילה…",
+      pypiEmpty: "המאגר ריק",
+      pypiEmptyText: "עדיין לא פורסמו חבילות Python למאגר הזה.",
+      pypiNoMatch: "אין חבילות תואמות",
+      pypiNoMatchText: "נסו שם אחר, או נקו את החיפוש.",
+      pypiNotConfigured: "Nexus אינו מוגדר",
+      pypiNotConfiguredText: "מנהל המערכת צריך להגדיר את כתובת Nexus ומאגר PyPI.",
+      pypiLoadError: "לא ניתן לטעון את המאגר",
+      pypiRetry: "נסו שוב",
+      pypiRefresh: "רענון",
+      pypiCopy: "העתקת פקודת pip",
+      pypiCopied: "פקודת ה-pip הועתקה",
+      pypiCopyFailed: "ההעתקה נכשלה",
+      pypiDownload: "הורדת wheel",
+      pypiLatest: "אחרונה",
+      pypiFiles: (n) => (n === 1 ? "קובץ אחד" : `${n} קבצים`),
+      pypiVersions: (n) => (n === 1 ? "גרסה אחת" : `${n} גרסאות`),
+      pypiCount: (n) => (n === 1 ? "חבילה אחת" : `${n} חבילות`),
+      pypiTruncated: "מוצגת רשימה חלקית - המאגר גדול מהמכסה שנשמרת במטמון.",
       actionsSubtitle: "כלים בשירות עצמי מול תשתיות הפיתוח המקומיות. בחרו כלי כדי להתחיל.",
       hubBack: "חזרה למרכז הפעולות",
-      hubNexusTitle: "העלאת ארטיפקטים ל-Nexus",
-      hubNexusDesc: "העלאה מרוכזת של חבילות Python, NPM ומודולי PowerShell למאגרי ה-Nexus המקומיים - גם תיקיות עם מאות קבצים.",
+      hubNexusTitle: "העלאת חבילות ל-Nexus",
+      hubNexusDesc: "העלו חבילות Python, ‏NPM ומודולי PowerShell למאגר הארגוני. היעד נקבע לפי סוג הקובץ, וניתן לשנות אותו לכל פריט.",
+      hubPsTitle: "התקנת PowerShell 7 ו-NuGet",
+      hubPsDesc: "הורידו קובץ התקנה אחד והפעילו אותו. NuGet ומאגר PowerShell הארגוני יוגדרו אוטומטית, בלי הרשאות מנהל.",
+      psBadge: "בלי הקלדה ובלי הרשאות מנהל. נדרש PowerShell 7.",
+      psOpenApps: "הורדת PowerShell 7 מהמאגר",
+      psOpenLink: "קישור הורדה נוסף",
+      psDownload: "הורד קובץ התקנה",
+      psDownloadStarted: "הקובץ ירד. הפעילו את Install-PAKAL-NuGet.cmd",
+      psStepDownload: "הורד",
+      psStepDownloadText: "לחץ על כפתור \"הורד קובץ התקנה\".",
+      psStepRun: "הפעל",
+      psStepRunText: "לחץ על הקובץ שהורד (Install-PAKAL-NuGet.cmd).",
+      psStepDone: "סיום",
+      psStepDoneText: "ההתקנה תתבצע אוטומטית ברקע ותציג הודעת אישור.",
+      psNeedPwsh: "אם PowerShell 7 עדיין לא מותקן, הורידו אותו מהמאגר ואז הפעילו את הקובץ שוב.",
+      psMissing: "מנהל המערכת צריך להגדיר את נתיב nuget.exe ואת כתובת מאגר PowerShell.",
+      psLoading: "טוען את הגדרות ההתקנה…",
+      psLoadError: "לא ניתן לטעון את מדריך ההתקנה",
       hubStatusLoading: "טוען הגדרות…", hubStatusError: "לא ניתן לטעון את ההגדרות",
       hubNexusNotConfigured: "Nexus טרם הוגדר",
       hubUploading: (done, total) => `מעלה · ${done} מתוך ${total}`,
@@ -159,7 +274,8 @@
       upFmtAlt: (kinds) => `ניתן להעביר גם ל: ${kinds}`,
       upFmtNoteAuto: "כל קובץ מקבל מאגר יעד אוטומטי לפי הסיומת - הראשון ברשימת המאגרים של אותו סוג.",
       upFmtNoteOverride: "ניתן לשנות את מאגר היעד בכל שורה, או לסמן כמה שורות ולהחליף לכולן יחד.",
-      upFmtNoteFolder: "בגרירת תיקייה נסרקות כל תת-התיקיות, וקבצים שאינם חבילות נתמכות מדולגים.",
+      upFmtNoteFolder: "בגרירת תיקייה נסרקות כל תת-התיקיות, כולל @scope, וקבצים שאינם חבילות נתמכות מדולגים.",
+      upFmtNoteZip: "קובץ ZIP נפתח בשרת. נתיבים כמו @angular/core/חבילה.tgz נשמרים ונשלחים למאגר NPM.",
       upFmtNoteDupes: "קבצים כפולים (אותו שם ואותו גודל) מתווספים לתור פעם אחת בלבד.",
       upSelectAll: "סימון כל הקבצים המוצגים בסינון", upSelectRow: (name) => `סימון ${name}`,
       upSelected: (n) => (n === 1 ? "קובץ אחד מסומן" : `${n} קבצים מסומנים`), upNoneSelected: "סמנו קבצים כדי לשנות להם יעד",
@@ -185,7 +301,7 @@
       upClearAll: "ניקוי הכל",
       upBatch: (done, total) => `${done} מתוך ${total} קבצים`,
       upDone: (s, e, f) => `ההעלאה הסתיימה: ${s} הצליחו · ${e} קיימים כבר · ${f} נכשלו`,
-      upUnsupported: "סוג קובץ לא נתמך (‎.whl ‎.tar.gz ‎.tgz ‎.nupkg)",
+      upUnsupported: "סוג קובץ לא נתמך (‎.whl ‎.tar.gz ‎.tgz ‎.nupkg ‎.zip)",
       upNoTarget: "לא הוגדר מאגר יעד לסוג חבילה זה",
       upTooLarge: (mb) => `הקובץ גדול מ-${mb}MB`,
       upAdded: (n) => (n === 1 ? "קובץ אחד נוסף לתור" : `${n} קבצים נוספו לתור`),
@@ -196,14 +312,20 @@
       upLeave: "העלאות עדיין מתבצעות. לעזוב את הדף?",
       cuAdd: "הוספת גרסה / העלאת קובץ", cuAdminOnly: "מנהלים בלבד",
       cuIntro: (folder) => `הקובץ יישמר ישירות בתיקיית התוכנה בשרת (\u2068${folder}\u2069) והקטלוג יסונכרן מיד לכל המשתמשים.`,
-      cuFolder: "תיקיית גרסה (רשות)", cuFolderHint: "השאירו ריק כדי לשמור בתיקייה הראשית של התוכנה.",
-      cuOverwrite: "החלפת הקובץ הקיים בשם זה", cuUpload: "העלאה לשרת", cuChoose: "בחירת קובץ אחר",
+      cuFolder: "גירסה", cuFolderHint: "תיקיית גרסה. השאירו ריק כדי לשמור בתיקייה הראשית.",
+      cuNotes: "הערות גרסה", cuNotesPh: "מה חדש בגרסה הזו",
+      cuDrop: "גררו קובץ לכאן או לחץ לבחירה",
+      cuOverwrite: "החלפת הקובץ הקיים בשם זה", cuUpload: "העלה לשרת", cuChoose: "בחירת קובץ אחר",
+      stActive: "זמין", stConstruction: "תחת תחזוקה / בשיפוצים", stSoon: "בקרוב",
+      stBlocked: "הפריט אינו זמין להורדה או להפעלה בזמן התחזוקה", stMenu: "סטטוס",
+      stSaved: "הסטטוס עודכן", stAdminNote: "גישת מנהל פעילה", stAdminBypass: "המשתמשים חסומים בזמן התחזוקה. כמנהל יש לך גישה מלאה לבדיקה וניהול.",
       cuUploading: (pct) => `מעלה… ${pct}%`, cuSaving: "שומר בתיקיית התוכנה…",
       cuSyncing: "הקובץ נשמר - מסנכרן את הקטלוג…", cuLive: "הגרסה החדשה זמינה לכל המשתמשים",
       cuSavedHidden: "הקובץ נשמר, אך הסריקה לא הציגה אותו (ייתכן שהוא מוסתר או שהסיומת אינה נסרקת).",
       cuExists: "קובץ בשם זה כבר קיים בתיקייה. סמנו \"החלפה\" כדי להחליף אותו.",
       cuTooLarge: (mb) => `הקובץ גדול מהמותר (${mb} MB)`, cuBadType: (exts) => `ניתן להעלות רק קבצי התקנה (${exts})`,
       cuDoneToast: (name) => `${name} נוסף והקטלוג עודכן`,
+      cuNotesFailed: "הקובץ נשמר, אך הערות הגרסה לא נשמרו",
       fbSignInTitle: "יש להתחבר כדי לשלוח פנייה",
       fbSignInText: "פניות נשמרות עם פרטי המשתמש המחובר, כדי שנוכל לחזור אליך. התחברו ונסו שוב.",
       annDismiss: "סימון כנקרא", annClose: "סגירה", annLabel: { info: "עדכון", success: "הודעה", warning: "שימו לב", danger: "חשוב" },
@@ -213,15 +335,42 @@
       brand: "PAKAL",
       brandSub: "Software & Development Portal",
       heroBrand: "PAKAL",
+      actShown: "Shown",
+      actHidden: "Hidden",
+      actHiddenTag: "Hidden from users",
+      actToggleTip: "Click to hide or show this action for users",
+      actNowHidden: "The action is now hidden from users",
+      actNowShown: "The action is visible to users again",
+      actToggleFailed: "Could not update visibility",
+      actNoneVisible: "No actions are available right now.",
+      tourStart: "Product tour",
+      heroSubtitle: "One organizational platform for software, installation kits, package repositories, and self-service developer tools.",
       heroTitle: "Software & Development Portal",
       footerCredits: "Built and maintained with ❤️ by the Servers Team",
       themeToggle: "Light/dark mode",
       syncLabel: "Sync / refresh",
       syncDone: (n) => `Catalog synced from the server · ${n} apps`,
       navHome: "Overview",
+      navCatalog: "Catalog",
+      navRepos: "Repositories",
       navApps: "Software Repository",
+      qsOpen: "Search",
+      qsTitle: "Quick search",
+      qsPlaceholder: "Search software, version, or tag…",
+      qsHint: "Type to search the portal",
+      qsEmpty: "No matching software",
+      qsCatalog: "Show every result in the catalog",
       navStacks: "Developer Stacks",
       navPlatforms: "Platforms",
+      navRepos: "Repositories",
+      reposSubtitle: "Artifact repositories in Nexus - browse and access them by type.",
+      noRepos: "No repositories defined yet.",
+      repoBrowse: "Browse repository",
+      repoNoUrl: "No URL configured",
+      actOpen: "Open",
+      actDownload: "Download",
+      repoTech_pypi: "PyPI", repoTech_npm: "npm", repoTech_nuget: "NuGet", repoTech_powershell: "PowerShell",
+      repoTech_docker: "Docker", repoTech_maven: "Maven", repoTech_apt: "APT", repoTech_raw: "Raw", repoTech_other: "Other",
       admin: "Admin",
       search: "Search",
       clearSearch: "Clear search",
@@ -235,6 +384,26 @@
       sortName: "Sort by name",
       sortUpdated: "Recently updated",
       sortSize: "Sort by size",
+      fsVersionDesc: "Version (newest first)",
+      fsVersionAsc: "Version (oldest first)",
+      fsDateDesc: "Date (newest first)",
+      fsDateAsc: "Date (oldest first)",
+      fsNameAsc: "File name (A-Z)",
+      fsNameDesc: "File name (Z-A)",
+      folderItems: (n) => `${n} ${n === 1 ? "item" : "items"}`,
+      folderBreadcrumb: "Folder location",
+      folderPick: "Open a subfolder to see its files.",
+      guideTitle: "Quick guide",
+      guideSub: "How to get started with the portal",
+      guideToggle: "Show or hide the guide",
+      guideIntro: "PAKAL is a single storefront for every app, package and developer tool in the organization - all self-service, with no admin rights.",
+      guidePoints: [
+        "Software catalog with 1-click installs and search from anywhere.",
+        "Internal Docker registry and a PyPI repository for Python packages.",
+        "Actions tab: build images, install PowerShell 7 and NuGet, and upload packages to Nexus.",
+        "Role-based tool kits and links to the internal platforms.",
+      ],
+      guideTour: "Start guided tour",
       coreTools: "Core tools",
       recent: "Recently updated",
       viewAll: "View all",
@@ -256,11 +425,12 @@
       loadErrorTitle: "Failed to load the catalog",
       retry: "Retry",
       officialInstallers: "Official installers",
-      colFile: "File",
+      colFile: "File name",
       colVersion: "Version",
-      colOs: "OS",
-      colDate: "Date",
+      colOs: "Operating system",
       colSize: "Size",
+      colDate: "Date",
+      colActions: "Actions",
       latest: "latest",
       noVersion: "unversioned",
       bundleCtx: (size, n) => `Full bundle · ${size} · ${n.toLocaleString()} files`,
@@ -269,6 +439,30 @@
       updated: "Updated",
       totalSize: "Total size",
       homepage: "Homepage",
+      docsButton: "View README & License",
+      docsReadme: "README",
+      docsLicense: "License",
+      docsCopy: "Copy to Clipboard",
+      docsCopied: "Copied",
+      docsCopyFailed: "Copy failed",
+      docsLoading: "Loading documentation…",
+      docsError: "Could not load the documentation",
+      docsRetry: "Try again",
+      docsGenerated: "Installation notes",
+      docsMissing: "No README was found in this package. Installation notes were generated from the package details.",
+      docsInstall: "Installation",
+      docsStepDownload: (name) => `Download ${name} from the portal`,
+      docsStepOpen: "Open the tool card and download the installer",
+      docsStepRun: "Run the installer and follow the prompts",
+      docsStepDone: "The tool is ready when installation finishes",
+      docsVersion: (v) => `Repository version: ${v}`,
+      docsNoLicense: "No license file was found in this package.",
+      docsTruncated: "This file was shortened because it exceeds the size limit.",
+      docsCallout_note: "Note",
+      docsCallout_tip: "Tip",
+      docsCallout_important: "Important",
+      docsCallout_warning: "Warning",
+      docsCallout_caution: "Caution",
       missingTools: (n) => `${n} not in repository`,
       moreTools: (n) => `+${n} more`,
       noStackTools: "None of this stack's tools were found in the repository",
@@ -304,6 +498,9 @@
       fbSuccess: "Your request was received successfully",
       fbRequired: "Subject and details are required",
       fbThrottled: "Too many submissions. Please try again in a few minutes.",
+      welcomeLead: "Welcome",
+      welcomeUser: (n) => `Welcome, ${n}`,
+      splashCaption: "Loading the PAKAL environment...",
       signIn: "Sign in",
       signOut: "Sign out",
       reloginCountdown: (s) => `You signed out. Signing in again automatically in ${s} seconds…`,
@@ -320,11 +517,50 @@
       signedInAs: (n) => `Welcome, ${n}`, signedOut: "You signed out of the portal",
       signingOut: "Signing out…",
       navActions: "Actions",
+      navPypi: "PyPI Catalog",
       navDocker: "Docker Registry",
+      pypiTitle: "PyPI Catalog",
+      pypiSubtitle: "Python packages from the organizational Nexus. Copy an install command or download a wheel.",
+      pypiSearch: "Search packages…",
+      pypiEmpty: "This repository is empty",
+      pypiEmptyText: "No Python packages have been published here yet.",
+      pypiNoMatch: "No matching packages",
+      pypiNoMatchText: "Try another name, or clear the search.",
+      pypiNotConfigured: "Nexus is not configured",
+      pypiNotConfiguredText: "An administrator needs to set the Nexus address and a PyPI repository.",
+      pypiLoadError: "The catalog could not be loaded",
+      pypiRetry: "Try again",
+      pypiRefresh: "Refresh",
+      pypiCopy: "Copy pip command",
+      pypiCopied: "pip command copied",
+      pypiCopyFailed: "Copy failed",
+      pypiDownload: "Download wheel",
+      pypiLatest: "latest",
+      pypiFiles: (n) => (n === 1 ? "1 file" : `${n} files`),
+      pypiVersions: (n) => (n === 1 ? "1 version" : `${n} versions`),
+      pypiCount: (n) => (n === 1 ? "1 package" : `${n} packages`),
+      pypiTruncated: "Showing a partial list - the repository is larger than the cached page limit.",
       actionsSubtitle: "Self-service tools for the local development infrastructure. Pick a tool to get started.",
       hubBack: "Back to Hub",
       hubNexusTitle: "Nexus Artifacts Uploader",
-      hubNexusDesc: "Bulk-publish Python, NPM and PowerShell packages to the local Nexus repositories - even folders with hundreds of files.",
+      hubNexusDesc: "Bulk-publish Python, NPM and PowerShell packages to the local Nexus repositories - even folders with hundreds of files. A ZIP keeps @scope directories such as @angular/core.",
+      hubPsTitle: "PowerShell 7 & NuGet",
+      hubPsDesc: "Download one file, run it, and NuGet plus the PowerShell gallery are set up for you.",
+      psBadge: "No typing and no administrator rights. PowerShell 7 is required.",
+      psOpenApps: "Download PowerShell 7 from the repository",
+      psOpenLink: "Additional download link",
+      psDownload: "Download setup file",
+      psDownloadStarted: "Downloaded. Run Install-PAKAL-NuGet.cmd",
+      psStepDownload: "Download",
+      psStepDownloadText: "Click the \"Download setup file\" button.",
+      psStepRun: "Run",
+      psStepRunText: "Open the downloaded file (Install-PAKAL-NuGet.cmd).",
+      psStepDone: "Done",
+      psStepDoneText: "Setup runs in the background and shows a confirmation.",
+      psNeedPwsh: "If PowerShell 7 is not installed yet, download it from the repository and run the file again.",
+      psMissing: "An administrator needs to set the nuget.exe path and the PowerShell repository URL.",
+      psLoading: "Loading the setup…",
+      psLoadError: "The setup guide could not be loaded",
       hubStatusLoading: "Loading settings…", hubStatusError: "Could not load the settings",
       hubNexusNotConfigured: "Nexus is not configured",
       hubUploading: (done, total) => `Uploading · ${done} of ${total}`,
@@ -352,7 +588,8 @@
       upFmtAlt: (kinds) => `Can also be sent to: ${kinds}`,
       upFmtNoteAuto: "Every file gets an automatic target from its extension - the first repository configured for that type.",
       upFmtNoteOverride: "You can change the target repository on any row, or select several rows and change them all at once.",
-      upFmtNoteFolder: "Dropped folders are scanned recursively; files that are not supported packages are skipped.",
+      upFmtNoteFolder: "Dropped folders are scanned recursively, including @scope directories; files that are not supported packages are skipped.",
+      upFmtNoteZip: "A ZIP is unpacked on the server. Paths such as @angular/core/package.tgz are preserved and published to the NPM repository.",
       upFmtNoteDupes: "Duplicate files (same name and size) are queued only once.",
       upSelectAll: "Select every file in the current filter", upSelectRow: (name) => `Select ${name}`,
       upSelected: (n) => (n === 1 ? "1 file selected" : `${n} files selected`), upNoneSelected: "Select files to change their target",
@@ -378,7 +615,7 @@
       upClearAll: "Clear all",
       upBatch: (done, total) => `${done} of ${total} files`,
       upDone: (s, e, f) => `Upload finished: ${s} succeeded · ${e} already existed · ${f} failed`,
-      upUnsupported: "Unsupported file type (.whl .tar.gz .tgz .nupkg)",
+      upUnsupported: "Unsupported file type (.whl .tar.gz .tgz .nupkg .zip)",
       upNoTarget: "No target repository is configured for this package type",
       upTooLarge: (mb) => `File is larger than ${mb} MB`,
       upAdded: (n) => (n === 1 ? "1 file added to the queue" : `${n} files added to the queue`),
@@ -389,14 +626,20 @@
       upLeave: "Uploads are still running. Leave the page?",
       cuAdd: "Add version / Upload file", cuAdminOnly: "Admins only",
       cuIntro: (folder) => `The file is saved directly in the application's folder on the server (\u2068${folder}\u2069) and the catalog resyncs for everyone right away.`,
-      cuFolder: "Version folder (optional)", cuFolderHint: "Leave empty to save in the application's main folder.",
+      cuFolder: "Version", cuFolderHint: "Version folder. Leave empty to save in the application's main folder.",
+      cuNotes: "Release notes", cuNotesPh: "What is new in this version",
+      cuDrop: "Drag a file here or click to choose",
       cuOverwrite: "Replace the existing file with this name", cuUpload: "Upload to server", cuChoose: "Choose another file",
+      stActive: "Available", stConstruction: "Under maintenance", stSoon: "Coming soon",
+      stBlocked: "Downloads and launch are unavailable while this item is under maintenance", stMenu: "Status",
+      stSaved: "Status updated", stAdminNote: "Admin access", stAdminBypass: "Users are blocked during maintenance. As an admin you keep full access for testing and management.",
       cuUploading: (pct) => `Uploading… ${pct}%`, cuSaving: "Saving into the application folder…",
       cuSyncing: "Saved - syncing the catalog…", cuLive: "The new version is live for every user",
       cuSavedHidden: "The file was saved, but the scan did not list it (it may be hidden, or its extension is not scanned).",
       cuExists: "A file with this name already exists in the folder. Tick \"Replace\" to overwrite it.",
       cuTooLarge: (mb) => `The file exceeds the limit (${mb} MB)`, cuBadType: (exts) => `Only installer files can be added (${exts})`,
       cuDoneToast: (name) => `${name} was added and the catalog updated`,
+      cuNotesFailed: "The file was saved, but its release notes were not stored",
       fbSignInTitle: "Sign in to send a request",
       fbSignInText: "Requests are saved with the signed-in user's details so we can get back to you. Sign in and try again.",
       annDismiss: "Mark as read", annClose: "Close", annLabel: { info: "Update", success: "Notice", warning: "Heads up", danger: "Important" },
@@ -418,6 +661,8 @@
     appsById: new Map(),
     bundles: [],
     platforms: [],
+    repositories: [],
+    actionsCatalog: [],
     categories: [],
     scan: null,
     view: "home",
@@ -429,17 +674,23 @@
     loadError: null,
     modal: null,
     modalOs: "all",
+    modalSort: "date-desc",
+    modalPath: [],
     pendingAppId: null,
     auth: null,
+    presentation: { status: {}, notes: {}, hidden_actions: [] },
     relogin: { mode: null, remaining: 0, total: 0, timer: null },
     ui: {},
     announcement: null,
     actions: {
       config: null, error: null, queue: [], seq: 0, running: false, aborting: false, controller: null,
-      tool: null, filter: "all", visible: 20, bulkTarget: "",
+      tool: null, filter: "all", visible: 20, bulkTarget: "", powershell: null,
     },
     dockerBuild: null,
+    pypi: { q: "", packages: null, error: "", loading: false, indexUrl: "", repository: "", truncated: false, seq: 0 },
     cardUpload: null,
+    docs: null,
+    guideOpen: (() => { try { return localStorage.getItem(GUIDE_KEY) === "1"; } catch (_) { return false; } })(),
   };
 
   // Admin-controlled visibility (console "Portal interface" page); unknown or not-yet-loaded keys count as visible.
@@ -523,10 +774,40 @@
 
   // -------------------------------------------------------------- renderers
 
+  function cardKeyStatus(key) {
+    const map = (state.presentation && state.presentation.status) || {};
+    return map[key] || "active";
+  }
+
+  function isBlockedStatus(status) {
+    return status === "construction" || status === "soon";
+  }
+
+  // Maintenance blocks users only; admins see the overlay but keep full access for testing and management.
+  const isLockedKey = (key) => isBlockedStatus(cardKeyStatus(key)) && !isAdmin();
+
+  function maintenanceOverlay(status) {
+    if (!isBlockedStatus(status)) return "";
+    const construction = status === "construction";
+    const label = construction ? t("stConstruction") : t("stSoon");
+    const tip = isAdmin() ? t("stAdminBypass") : t("stBlocked");
+    return `<span class="maint-overlay" title="${esc(tip)}"><span class="maint-badge">${construction ? "🚧" : "⏳"} ${esc(label)}</span>${isAdmin() ? `<span class="maint-admin-note">${icon("shield")}${esc(t("stAdminNote"))}</span>` : ""}</span>`;
+  }
+
+  function statusButton(key) {
+    if (!isAdmin()) return "";
+    return `<button class="icon-btn card-status-btn" type="button" data-action="card-status-menu" data-key="${esc(key)}" title="${esc(t("stMenu"))}" aria-label="${esc(t("stMenu"))}">${icon("settings")}</button>`;
+  }
+
   function appCard(app) {
     const file = preferredFile(app);
+    const status = cardKeyStatus(`app:${app.id}`);
+    const maint = isBlockedStatus(status);
+    const blocked = maint && !isAdmin();
     return `
-      <article class="card app-card" data-action="open-app" data-id="${esc(app.id)}" tabindex="0" role="button" aria-label="${esc(app.name)}">
+      <article class="card app-card${maint ? ` is-maint is-${status}` : ""}${blocked ? " is-locked" : ""}" data-status-key="app:${esc(app.id)}" data-action="open-app" data-id="${esc(app.id)}" tabindex="0" role="button" aria-label="${esc(app.name)}"${blocked ? ` aria-disabled="true" title="${esc(t("stBlocked"))}"` : ""}>
+        ${maintenanceOverlay(status)}
+        ${statusButton(`app:${app.id}`)}
         <div class="app-card-top">
           ${appIcon(app.icon_url, app.name)}
           <div class="app-card-title">
@@ -540,7 +821,7 @@
           ${sizeTag(fileSize(file))}
           <span class="spacer"></span>
           ${osTags(app.platforms)}
-          ${file && shown("btn_quick_download") ? `<button class="icon-btn icon-btn-sm" type="button" ${downloadAttrs(file)} title="${esc(t("download"))} ${esc(file.filename)}" aria-label="${esc(t("download"))}">${icon("download")}</button>` : ""}
+          ${file && shown("btn_quick_download") && !blocked ? `<button class="icon-btn icon-btn-sm" type="button" ${downloadAttrs(file)} title="${esc(t("download"))} ${esc(file.filename)}" aria-label="${esc(t("download"))}">${icon("download")}</button>` : ""}
         </div>
       </article>`;
   }
@@ -596,6 +877,32 @@
     return appIcon(p.icon_url, p.name, size);
   }
 
+  // Collapsible quick-start guide. Hidden behind a subtle "?" header for returning users; the admin
+  // "guide" visibility toggle removes it entirely. State persists per browser in localStorage.
+  function guidePanel() {
+    if (!shown("guide")) return "";
+    const open = state.guideOpen;
+    const points = t("guidePoints");
+    return `
+      <section class="guide-card${open ? " is-open" : ""}">
+        <button class="guide-toggle" type="button" data-action="toggle-guide" aria-expanded="${open ? "true" : "false"}" aria-controls="guide-body" title="${esc(t("guideToggle"))}">
+          <span class="guide-q" aria-hidden="true">${icon("help")}</span>
+          <span class="guide-head-text">
+            <span class="guide-title">${esc(t("guideTitle"))}</span>
+            <span class="guide-sub">${esc(t("guideSub"))}</span>
+          </span>
+          <span class="guide-chev" aria-hidden="true">${icon(open ? "up" : "down")}</span>
+        </button>
+        <div class="guide-body" id="guide-body"${open ? "" : " hidden"}>
+          <p class="guide-intro">${esc(t("guideIntro"))}</p>
+          <ul class="guide-points">${(Array.isArray(points) ? points : []).map((p) => `<li>${icon("check")}<span>${esc(p)}</span></li>`).join("")}</ul>
+          <div class="guide-actions">
+            <button class="btn btn-primary btn-sm" type="button" data-tour-start>${icon("activity")}<span>${esc(t("guideTour"))}</span></button>
+          </div>
+        </div>
+      </section>`;
+  }
+
   function renderHome() {
     const root = $("#home-dynamic");
     if (state.loading) {
@@ -616,6 +923,7 @@
     const recent = [...state.apps].sort((a, b) => b.updated_ts - a.updated_ts).slice(0, 6);
 
     root.innerHTML = `
+      ${guidePanel()}
       <section class="section">
         <div class="section-head">
           <h2 class="section-title">${esc(t("coreTools"))}</h2>
@@ -635,6 +943,48 @@
         </div>
         <div class="grid grid-stacks">${state.bundles.slice(0, 3).map((b) => stackCard(b, 4)).join("")}</div>
       </section>` : ""}`;
+  }
+
+  // Numeric-aware version compare (1.85.1 > 1.9); ties fall back to the file's modified time.
+  function versionParts(value) {
+    const match = String(value || "").match(/\d+(?:\.\d+)*/);
+    return match ? match[0].split(".").map((n) => parseInt(n, 10)) : [];
+  }
+  function cmpVersion(a, b) {
+    const pa = versionParts(a.version);
+    const pb = versionParts(b.version);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+      const diff = (pa[i] || 0) - (pb[i] || 0);
+      if (diff) return diff;
+    }
+    return a.modified_ts - b.modified_ts;
+  }
+  const fileSorters = {
+    "version-desc": (a, b) => cmpVersion(b, a),
+    "version-asc": (a, b) => cmpVersion(a, b),
+    "date-desc": (a, b) => b.modified_ts - a.modified_ts,
+    "date-asc": (a, b) => a.modified_ts - b.modified_ts,
+    "name-asc": (a, b) => a.filename.localeCompare(b.filename, state.lang, { numeric: true, sensitivity: "base" }),
+    "name-desc": (a, b) => b.filename.localeCompare(a.filename, state.lang, { numeric: true, sensitivity: "base" }),
+  };
+
+  // The folders a file sits under, relative to its own app folder: "microsoft/visual studio/2022/vs.exe"
+  // inside the "microsoft/visual studio" app yields ["2022"]. Used to drill into nested installer folders.
+  function fileFolderSegs(app, file) {
+    let rel = String(file.rel_path || "");
+    const prefix = app.folder ? app.folder.replace(/\/+$/, "") + "/" : "";
+    if (prefix && rel.startsWith(prefix)) rel = rel.slice(prefix.length);
+    else if (prefix) return [];
+    const parts = rel.split("/");
+    parts.pop();
+    return parts.filter(Boolean);
+  }
+
+  function folderComparator() {
+    if (state.modalSort === "date-desc") return (a, b) => b.ts - a.ts;
+    if (state.modalSort === "date-asc") return (a, b) => a.ts - b.ts;
+    const dir = state.modalSort === "name-desc" ? -1 : 1;
+    return (a, b) => dir * a.name.localeCompare(b.name, state.lang, { numeric: true, sensitivity: "base" });
   }
 
   function filteredApps() {
@@ -726,25 +1076,117 @@
       : emptyState(t("navPlatforms"), t("noPlatforms"), "globe");
   }
 
+  // Repositories tab: artifact repos (Nexus). Docker/PyPI open the built-in browsers; others open their URL.
+  function repoCard(r) {
+    const techLabel = t(`repoTech_${r.tech}`) || r.tech;
+    const internal = (r.tech === "docker" && shown("tab_docker")) || (r.tech === "pypi" && shown("tab_pypi"));
+    const clickable = internal || Boolean(r.url);
+    const hit = internal
+      ? `data-action="repo-open" data-tech="${esc(r.tech)}"`
+      : (r.url ? `data-action="action-link" data-url="${esc(r.url)}"` : "");
+    const tag = internal ? t("repoBrowse") : (r.url ? r.url.replace(/^https?:\/\//, "") : t("repoNoUrl"));
+    return `
+      <button type="button" class="card platform-card repo-card${clickable ? "" : " is-static"}" ${hit}${clickable ? "" : " disabled"}>
+        <span class="platform-icon repo-icon" style="--repo-color:${esc(r.color || "#6366F1")}">${icon(r.icon || "package")}</span>
+        <span class="platform-body">
+          <strong>${esc(r.name)}<span class="repo-badge">${esc(techLabel)}</span></strong>
+          <span class="muted">${esc(loc(r, "description"))}</span>
+          <span class="platform-url">${esc(tag)}</span>
+        </span>
+        <span class="platform-ext">${icon(internal ? "arrowNe" : "external")}</span>
+      </button>`;
+  }
+
+  function renderRepositories() {
+    const grid = $("#repos-grid");
+    if (!grid) return;
+    grid.innerHTML = state.repositories.length
+      ? state.repositories.map(repoCard).join("")
+      : emptyState(t("navRepos"), t("noRepos"), "package");
+  }
+
   // ---------------------------------------------------------- actions: hub
 
-  const ACTION_TOOLS = ["nexus", "docker"];
+  const ACTION_TOOLS = ["nexus", "docker", "powershell"];
   const actionsHash = () => (state.actions.tool ? `actions/${state.actions.tool}` : "actions");
 
-  function hubCard({ tool, title, desc, iconName, chips, status, tone, disabled = false, english = false }) {
+  const isActionHidden = (tool) => ((state.presentation && state.presentation.hidden_actions) || []).includes(tool);
+
+  function actionAdminBar(tool) {
+    if (!isAdmin()) return "";
+    const hidden = isActionHidden(tool);
+    const label = hidden ? `🙈 ${t("actHidden")}` : `👁️ ${t("actShown")}`;
     return `
-      <button class="hub-card hub-card-${tool}" type="button" data-action="hub-open" data-tool="${tool}" ${disabled ? "disabled" : ""} ${english ? 'dir="ltr" lang="en"' : ""}>
-        <span class="hub-card-top">
-          <span class="hub-icon">${icon(iconName)}</span>
-          <span class="hub-go" aria-hidden="true">${icon("arrow", "icon-flip")}</span>
-        </span>
-        <span class="hub-card-body">
-          <strong class="hub-title">${esc(title)}</strong>
-          <span class="hub-desc">${esc(desc)}</span>
-        </span>
-        <span class="hub-chips">${chips.map((c) => `<span class="hub-chip">${esc(c)}</span>`).join("")}</span>
-        <span class="hub-status tone-${tone}"><span class="hub-dot"></span><span>${esc(status)}</span></span>
-      </button>`;
+      <div class="hub-admin" dir="${state.lang === "he" ? "rtl" : "ltr"}" lang="${state.lang}">
+        <button class="action-vis-toggle${hidden ? " is-off" : " is-on"}" type="button" data-action="action-visibility" data-tool="${esc(tool)}" aria-pressed="${hidden ? "false" : "true"}" title="${esc(t("actToggleTip"))}" aria-label="${esc(`${label} - ${t("actToggleTip")}`)}">${esc(label)}</button>
+        <button class="icon-btn hub-admin-btn" type="button" data-action="card-status-menu" data-key="tool:${esc(tool)}" title="${esc(t("stMenu"))}" aria-label="${esc(t("stMenu"))}">${icon("settings")}</button>
+      </div>`;
+  }
+
+  function hubCard({ tool, title, desc, iconName, chips, status, tone, disabled = false, english = false, hit = "", admin = true }) {
+    const hidden = isActionHidden(tool);
+    if (hidden && !isAdmin()) return "";
+    const hitAttrs = hit || `data-action="hub-open" data-tool="${esc(tool)}"`;
+    const availability = cardKeyStatus(`tool:${tool}`);
+    const maint = isBlockedStatus(availability);
+    const locked = maint && !isAdmin();
+    const classes = [
+      "hub-card", "action-card", `hub-card-${tool}`,
+      maint ? `is-maint is-${availability}` : "",
+      locked ? "is-locked" : "",
+      disabled ? "is-disabled" : "",
+      hidden ? "is-hidden-action" : "",
+      isAdmin() ? "has-admin" : "",
+    ].filter(Boolean).join(" ");
+    return `
+      <article class="${classes}" data-status-key="tool:${esc(tool)}" data-tool="${tool}" ${english ? 'dir="ltr" lang="en"' : ""}>
+        <button class="hub-hit" type="button" ${hitAttrs} aria-label="${esc(title)}"${locked ? ` aria-disabled="true" title="${esc(t("stBlocked"))}"` : ""} ${disabled ? "disabled" : ""}></button>
+        ${maintenanceOverlay(availability)}
+        ${admin ? actionAdminBar(tool) : ""}
+        <div class="hub-card-main">
+          <div class="hub-card-top">
+            <span class="hub-icon">${icon(iconName)}</span>
+            <span class="hub-go" aria-hidden="true">${icon("arrowNe")}</span>
+          </div>
+          <div class="hub-card-body">
+            <strong class="hub-title">${esc(title)}</strong>
+            <span class="hub-desc">${esc(desc)}</span>
+          </div>
+        </div>
+        <div class="hub-foot">
+          <div class="hub-chips">${chips.map((c) => `<span class="hub-chip">${esc(c)}</span>`).join("")}</div>
+          <div class="hub-status tone-${tone}"><span class="hub-dot"></span><span>${esc(status)}</span></div>
+        </div>
+        ${hidden ? `<span class="hub-hidden-tag" dir="${state.lang === "he" ? "rtl" : "ltr"}">🙈 ${esc(t("actHiddenTag"))}</span>` : ""}
+      </article>`;
+  }
+
+  function toggleActionVisibility(tool) {
+    return setActionVisibility(tool, !isActionHidden(tool));
+  }
+
+  async function setActionVisibility(tool, hide) {
+    if (!isAdmin() || !ACTION_TOOLS.includes(tool)) return;
+    const before = (state.presentation && state.presentation.hidden_actions) || [];
+    const after = hide ? [...new Set([...before, tool])] : before.filter((x) => x !== tool);
+    state.presentation = { ...state.presentation, hidden_actions: after };
+    renderHub();
+    try {
+      const response = await fetch("/api/manage/action-visibility", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-PAKAL-Request": "1" },
+        body: JSON.stringify({ tool, visibility: hide ? "hidden" : "active" }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      toast(hide ? t("actNowHidden") : t("actNowShown"), "success", 2500);
+    } catch (err) {
+      state.presentation = { ...state.presentation, hidden_actions: before };
+      renderHub();
+      toast(`${t("actToggleFailed")} (${err.message})`, "error");
+    }
+    const btn = $(`.action-vis-toggle[data-tool="${tool}"]`);
+    if (btn) btn.focus({ preventScroll: true });
   }
 
   function nexusHubStatus() {
@@ -761,40 +1203,69 @@
     return [t("hubReady"), "ok"];
   }
 
-  // The Docker card is English-only like the rest of the Docker ecosystem; docker.js reports its state.
-  function dockerHubCard() {
-    if (!shown("docker_build")) return "";
-    const d = state.dockerBuild;
-    if (d && d.loaded && !d.visible) return "";
-    const [status, tone] = d && d.loaded ? [d.status, d.tone] : ["Checking availability…", "muted"];
+  // Built-in tools keep their code-backed panels and live status; metadata (title/desc/icon/chips/order)
+  // comes from the Action table, falling back to the portal's own translations when an admin leaves it blank.
+  function builtinHubCard(item) {
+    const titleOr = (key) => loc(item, "name") || t(key);
+    const descOr = (key) => loc(item, "description") || t(key);
+    const chipsOr = (fallback) => (item.chips && item.chips.length ? item.chips : fallback);
+    if (item.builtin === "nexus") {
+      const cfg = state.actions.config;
+      const [status, tone] = nexusHubStatus();
+      const kinds = cfg ? Object.keys(cfg.kinds).map((k) => t(`upKind_${k}`))
+        : [t("upKind_pypi"), t("upKind_npm"), t("upKind_powershell")];
+      return hubCard({ tool: "nexus", title: titleOr("hubNexusTitle"), desc: descOr("hubNexusDesc"),
+        iconName: item.icon || "upload", chips: chipsOr(kinds), status, tone });
+    }
+    if (item.builtin === "powershell") {
+      const ps = state.actions.powershell;
+      return hubCard({ tool: "powershell", title: titleOr("hubPsTitle"), desc: descOr("hubPsDesc"),
+        iconName: item.icon || "terminal", chips: chipsOr(["pwsh", "nuget.exe", "NexusPS"]),
+        status: !ps ? t("hubStatusLoading") : ps.configured ? t("hubReady") : t("psMissing"),
+        tone: ps && ps.configured ? "ok" : "info" });
+    }
+    if (item.builtin === "docker") {
+      // English-only like the rest of the Docker ecosystem; docker.js reports its live state.
+      if (!shown("docker_build")) return "";
+      const d = state.dockerBuild;
+      if (d && d.loaded && !d.visible) return "";
+      const [status, tone] = d && d.loaded ? [d.status, d.tone] : ["Checking availability…", "muted"];
+      return hubCard({ tool: "docker",
+        title: loc(item, "name") || "Docker Image Builder",
+        desc: loc(item, "description") || "Upload a project ZIP with a Dockerfile. The image is built, tagged, and pushed to the organizational registry.",
+        iconName: item.icon || "container", chips: chipsOr(["Dockerfile", "Build", "Push", "Live log"]),
+        status, tone, disabled: Boolean(d && d.loaded && !d.available), english: true });
+    }
+    return "";
+  }
+
+  // Admin-defined actions: a simple card that opens a link or downloads a file. No server-side execution.
+  function customHubCard(item) {
+    const url = item.target || "";
+    const hit = item.kind === "download"
+      ? `data-action="action-download" data-url="${esc(url)}"`
+      : `data-action="action-link" data-url="${esc(url)}"`;
     return hubCard({
-      tool: "docker",
-      title: "Docker Image Builder",
-      desc: "Upload a project ZIP with a Dockerfile - the server builds the image, tags it and pushes it to the organizational registry.",
-      iconName: "container",
-      chips: ["Dockerfile", "Build", "Push", "Live log"],
-      status,
-      tone,
-      disabled: Boolean(d && d.loaded && !d.available),
-      english: true,
+      tool: item.key,
+      title: loc(item, "name"),
+      desc: loc(item, "description"),
+      iconName: item.icon || "sliders",
+      chips: item.chips || [],
+      status: item.kind === "download" ? t("actDownload") : t("actOpen"),
+      tone: "ok",
+      english: item.english,
+      hit,
+      admin: false,
     });
   }
 
   function renderHub() {
     const grid = $("#hub-grid");
     if (!grid) return;
-    const cfg = state.actions.config;
-    const [status, tone] = nexusHubStatus();
-    const kinds = cfg ? Object.keys(cfg.kinds).map((k) => t(`upKind_${k}`)) : [t("upKind_pypi"), t("upKind_npm"), t("upKind_powershell")];
-    grid.innerHTML = hubCard({
-      tool: "nexus",
-      title: t("hubNexusTitle"),
-      desc: t("hubNexusDesc"),
-      iconName: "upload",
-      chips: kinds,
-      status,
-      tone,
-    }) + dockerHubCard();
+    const html = (state.actionsCatalog || [])
+      .map((item) => (item.builtin ? builtinHubCard(item) : customHubCard(item)))
+      .join("");
+    grid.innerHTML = html.trim() ? html : `<div class="hub-empty">${emptyState(t("navActions"), t("actNoneVisible"), "settings")}</div>`;
   }
 
   function renderActionsPanels() {
@@ -803,11 +1274,14 @@
       panel.hidden = panel.dataset.panel !== (tool || "hub");
     });
     if (!tool) renderHub();
+    if (tool === "powershell") renderPowershell();
   }
 
   function openTool(tool, { push = false } = {}) {
     const a = state.actions;
-    const next = ACTION_TOOLS.includes(tool) && (tool !== "docker" || shown("docker_build")) ? tool : null;
+    const allowed = ACTION_TOOLS.includes(tool) && (tool !== "docker" || shown("docker_build"))
+      && (isAdmin() || (!isActionHidden(tool) && !isLockedKey(`tool:${tool}`)));
+    const next = allowed ? tool : null;
     const changed = next !== a.tool;
     a.tool = next;
     if (state.view === "actions" && window.location.hash !== `#${actionsHash()}`) {
@@ -816,12 +1290,70 @@
     }
     renderActionsPanels();
     if (changed) window.scrollTo({ top: 0 });
+    if (next === "powershell" && !a.powershell) loadPowershell();
+    else if (next === "powershell") renderPowershell();
     emit("actions-tool", a.tool);
   }
 
   function backToHub() {
     if (history.state && history.state.pakalTool) history.back();
     else openTool(null);
+  }
+
+  function renderPowershell() {
+    const root = $("#ps-root");
+    if (!root) return;
+    const ps = state.actions.powershell;
+    if (!ps) {
+      root.innerHTML = `<div class="ps-guide"><p class="muted">${esc(t("psLoading"))}</p></div>`;
+      return;
+    }
+    if (ps.error) {
+      root.innerHTML = emptyState(t("psLoadError"), ps.error, "alert",
+        `<button class="btn btn-secondary" type="button" data-action="ps-reload">${icon("refresh")}<span>${esc(t("retry"))}</span></button>`);
+      return;
+    }
+    const extra = ps.powershell7_url
+      ? `<a class="btn btn-secondary" href="${esc(ps.powershell7_url)}" target="_blank" rel="noopener noreferrer">${icon("external")}<span>${esc(t("psOpenLink"))}</span></a>`
+      : "";
+    const download = ps.configured
+      ? `<a class="btn btn-primary btn-lg ps-setup-btn" href="${esc(ps.download_url || "/api/tools/setup-nuget.cmd")}" download="${esc(ps.download_name || "Install-PAKAL-NuGet.cmd")}" data-action="ps-download">${icon("download")}<span>${esc(t("psDownload"))}</span></a>`
+      : `<div class="notice">${icon("alert")}<span>${esc(t("psMissing"))}</span></div>`;
+    const step = (n, title, text) => `
+      <li class="ps-step-item">
+        <span class="ps-step-num" aria-hidden="true">${n}</span>
+        <div>
+          <strong>${esc(title)}</strong>
+          <p>${esc(text)}</p>
+        </div>
+      </li>`;
+    root.innerHTML = `
+      <div class="ps-guide">
+        <div class="ps-badge">${icon("check")}<span>${esc(t("psBadge"))}</span></div>
+        <ol class="ps-steps">
+          ${step(1, t("psStepDownload"), t("psStepDownloadText"))}
+          ${step(2, t("psStepRun"), t("psStepRunText"))}
+          ${step(3, t("psStepDone"), t("psStepDoneText"))}
+        </ol>
+        ${download}
+        <p class="ps-footnote">${esc(t("psNeedPwsh"))}</p>
+        <div class="ps-actions">
+          <button class="btn btn-secondary" type="button" data-action="ps-apps">${icon("download")}<span>${esc(t("psOpenApps"))}</span></button>
+          ${extra}
+        </div>
+      </div>`;
+  }
+
+  async function loadPowershell() {
+    state.actions.powershell = null;
+    renderPowershell();
+    try {
+      state.actions.powershell = await fetchJson("/api/actions/powershell");
+    } catch (err) {
+      state.actions.powershell = { error: err.message, configured: false };
+    }
+    renderPowershell();
+    if (!state.actions.tool) renderHub();
   }
 
   // ------------------------------------------------- actions: Nexus artifacts uploader
@@ -835,6 +1367,7 @@
   const EDITABLE = new Set(["pending", "failed", "cancelled"]);
   const QUEUE_PAGE = 20;
   const FORMAT_KEYS = { ".whl": "upFmt_whl", ".tar.gz": "upFmt_targz", ".tgz": "upFmt_tgz", ".nupkg": "upFmt_nupkg" };
+  const packagePaths = new WeakMap();
 
   function humanBytes(n) {
     if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
@@ -846,6 +1379,7 @@
   function detectKind(name) {
     const cfg = state.actions.config;
     const lower = name.toLowerCase();
+    if (lower.endsWith(".zip")) return "npm";
     const rule = ((cfg && cfg.detect) || []).find(([ext]) => lower.endsWith(ext));
     return rule ? rule[1] : null;
   }
@@ -853,6 +1387,10 @@
   // Every "kind:repository" the file's format can be published to; the first entry is the automatic target.
   function compatibleTargets(name) {
     const cfg = state.actions.config;
+    if (name.toLowerCase().endsWith(".zip")) {
+      const repos = (cfg && cfg.kinds && cfg.kinds.npm && cfg.kinds.npm.repositories) || [];
+      return repos.map((repo) => `npm:${repo}`);
+    }
     const detected = detectKind(name);
     if (!cfg || !detected) return [];
     const lower = name.toLowerCase();
@@ -935,7 +1473,7 @@
       <tr class="q-row q-${item.status}${item.selected ? " is-selected" : ""}${item.flash ? " is-flash" : ""}" data-qid="${item.id}">
         <td class="q-check"><input type="checkbox" class="check" data-qsel="${item.id}" ${item.selected ? "checked" : ""} aria-label="${esc(t("upSelectRow", item.name))}"></td>
         <td><div class="file-cell">
-          <span class="file-name" dir="ltr" title="${esc(item.name)}">${esc(item.name)}</span>
+          <span class="file-name" dir="ltr" title="${esc(item.display || item.name)}">${esc(item.display || item.name)}</span>
           ${item.pkg ? `<span class="file-ctx" dir="ltr">${esc(item.pkg)}</span>` : ""}
           ${detail ? `<span class="q-detail">${esc(detail)}</span>` : ""}
         </div></td>
@@ -1146,6 +1684,7 @@
       t("upFmtNoteAuto"),
       cfg.repo_override ? t("upFmtNoteOverride") : t("upOverrideOff"),
       t("upFmtNoteFolder"),
+      t("upFmtNoteZip"),
       t("upFmtNoteDupes"),
       cfg.max_upload_mb ? t("upLimit", cfg.max_upload_mb) : "",
     ].filter(Boolean);
@@ -1214,7 +1753,13 @@
     const files = [];
     const walk = async (entry, depth) => {
       if (entry.isFile) {
-        try { files.push(await new Promise((resolve, reject) => entry.file(resolve, reject))); } catch (_) { /* unreadable */ }
+        try {
+          files.push(await new Promise((resolve, reject) => entry.file((file) => {
+            const rel = String(entry.fullPath || "").replace(/^\/+/, "");
+            if (rel) packagePaths.set(file, rel);
+            resolve(file);
+          }, reject)));
+        } catch (_) { /* unreadable */ }
         return;
       }
       if (!entry.isDirectory || depth > 6) return;
@@ -1233,25 +1778,27 @@
     const a = state.actions;
     const cfg = a.config;
     if (!cfg || !cfg.configured) return;
-    const keys = new Set(a.queue.map((i) => `${i.name}|${i.size}`));
+    const keys = new Set(a.queue.map((i) => `${i.display || i.name}|${i.size}`));
     const maxBytes = (cfg.max_upload_mb || 0) * 1024 * 1024;
     let added = 0;
     let duplicates = 0;
     let skipped = 0;
     files.forEach((file) => {
-      const key = `${file.name}|${file.size}`;
+      const rel = String(file.webkitRelativePath || packagePaths.get(file) || file.name).replace(/\\/g, "/").replace(/^\/+/, "");
+      const base = rel.split("/").filter(Boolean).pop() || file.name;
+      const key = `${rel}|${file.size}`;
       if (keys.has(key)) {
         duplicates += 1;
         return;
       }
-      const kind = detectKind(file.name);
+      const kind = detectKind(base);
       if (!kind && fromFolder) {
         skipped += 1;
         return;
       }
-      const targets = targetsFor(file.name);
+      const targets = targetsFor(base);
       const item = {
-        id: ++a.seq, file, name: file.name, size: file.size, target: targets[0] || "", status: "pending",
+        id: ++a.seq, file, name: base, display: rel, size: file.size, target: targets[0] || "", status: "pending",
         loaded: 0, detail: "", pkg: "", blocked: false, publishing: false, xhr: null, controller: null, selected: false, flash: false,
       };
       const block = (reason) => { item.status = "failed"; item.blocked = true; item.detail = reason; };
@@ -1362,7 +1909,10 @@
   function settleUpload(item, status, body, detail = "") {
     if (item.status !== "uploading") return;
     Object.assign(item, { status, xhr: null, controller: null, loaded: status === "cancelled" ? 0 : item.size, publishing: false });
-    if (body && body.package) item.pkg = `${body.package} ${body.version || ""}`.trim();
+    if (body && Array.isArray(body.packages) && body.packages.length) {
+      const names = body.packages.map((entry) => entry.package || entry.path).filter(Boolean);
+      item.pkg = names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
+    } else if (body && body.package) item.pkg = `${body.package} ${body.version || ""}`.trim();
     const repo = splitTarget(item.target)[1];
     if (!detail && status === "success") detail = t("upPublishedTo", repo);
     else if (!detail && status === "exists") detail = t("upExistsIn", repo);
@@ -1431,6 +1981,7 @@
       state.actions.error = err.message;
     }
     renderActions();
+    if (!state.actions.powershell) loadPowershell();
   }
 
   // --------------------------------------------------------- visibility
@@ -1446,6 +1997,8 @@
     const visibility = data.visibility || {};
     const changed = JSON.stringify(visibility) !== JSON.stringify(state.ui);
     state.ui = visibility;
+    // Let the standalone onboarding tour honour the admin "guide" toggle.
+    window.PAKAL_TOUR_DISABLED = !shown("guide");
     state.announcement = data.announcement || null;
     renderAnnouncement();
     if (quiet && !changed) return;
@@ -1536,15 +2089,217 @@
     renderApps();
     renderBundles();
     renderPlatforms();
+    renderRepositories();
+    renderHub();
     renderView();
     if (state.modal) refreshModal();
+  }
+
+  // --------------------------------------------------------------- software docs
+
+  function inlineDocs(text) {
+    return text.split(/(`[^`]+`)/g).map((part) => {
+      if (/^`[^`]+`$/.test(part)) return `<code>${esc(part.slice(1, -1))}</code>`;
+      let html = esc(part);
+      const link = (label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+      html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, (_m, alt, url) => link(alt || url, url));
+      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => link(label, url));
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_]+)__/g, "<strong>$1</strong>");
+      html = html.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, "$1<em>$2</em>");
+      return html;
+    }).join("");
+  }
+
+  function docsCodeBlock(text, lang = "") {
+    return `
+      <div class="docs-code">
+        <div class="docs-code-head"><span>${esc(lang || "text")}</span><button class="docs-code-copy" type="button" data-action="docs-copy-code">${icon("copy")}<span>${esc(t("docsCopy"))}</span></button></div>
+        <pre dir="ltr"><code>${esc(text)}</code></pre>
+      </div>`;
+  }
+
+  function docsCallout(lines) {
+    const first = lines[0] || "";
+    const match = first.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$/i);
+    if (!match) return `<blockquote>${inlineDocs(lines.join(" "))}</blockquote>`;
+    const kind = match[1].toLowerCase();
+    const body = [match[2], ...lines.slice(1)].filter((line) => line.trim()).join(" ");
+    return `<aside class="docs-callout docs-callout-${kind}"><span class="docs-callout-label">${esc(t(`docsCallout_${kind}`))}</span><div>${inlineDocs(body)}</div></aside>`;
+  }
+
+  function renderDocsMarkdown(source) {
+    const lines = String(source || "").replace(/\r\n?/g, "\n").split("\n");
+    const out = [];
+    let para = [];
+    const flush = () => {
+      if (para.length) out.push(`<p>${inlineDocs(para.join(" "))}</p>`);
+      para = [];
+    };
+    const cells = (row) => row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+    const listItem = /^\s*(?:[-*+]|\d+[.)])\s+/;
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      const fence = line.match(/^\s*(```|~~~)\s*([\w+#.-]*)/);
+      if (fence) {
+        flush();
+        const body = [];
+        i += 1;
+        while (i < lines.length && !lines[i].trim().startsWith(fence[1])) body.push(lines[i++]);
+        i += 1;
+        out.push(docsCodeBlock(body.join("\n"), fence[2]));
+        continue;
+      }
+      if (!line.trim()) { flush(); i += 1; continue; }
+      const heading = line.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/);
+      if (heading) {
+        flush();
+        const level = Math.min(6, heading[1].length + 2);
+        out.push(`<h${level}>${inlineDocs(heading[2])}</h${level}>`);
+        i += 1;
+        continue;
+      }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flush(); out.push("<hr>"); i += 1; continue; }
+      if (/^\s*>/.test(line)) {
+        flush();
+        const quote = [];
+        while (i < lines.length && /^\s*>/.test(lines[i])) quote.push(lines[i++].replace(/^\s*>\s?/, ""));
+        out.push(docsCallout(quote));
+        continue;
+      }
+      if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+        flush();
+        const head = cells(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) rows.push(cells(lines[i++]));
+        out.push(`<div class="table-wrap"><table class="table"><thead><tr>${head.map((cell) => `<th>${inlineDocs(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${head.map((_cell, col) => `<td>${inlineDocs(row[col] || "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        continue;
+      }
+      if (listItem.test(line)) {
+        flush();
+        const ordered = /^\s*\d/.test(line);
+        const items = [];
+        while (i < lines.length && listItem.test(lines[i])) {
+          items.push(lines[i++].replace(listItem, ""));
+          while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !listItem.test(lines[i])) items[items.length - 1] += ` ${lines[i++].trim()}`;
+        }
+        const tag = ordered ? "ol" : "ul";
+        out.push(`<${tag}>${items.map((item) => `<li>${inlineDocs(item)}</li>`).join("")}</${tag}>`);
+        continue;
+      }
+      para.push(line.trim());
+      i += 1;
+    }
+    flush();
+    return out.join("");
+  }
+
+  function fallbackReadme(app) {
+    const file = preferredFile(app);
+    const steps = [
+      file ? t("docsStepDownload", file.filename) : t("docsStepOpen"),
+      t("docsStepRun"),
+      t("docsStepDone"),
+    ];
+    const lines = [`# ${app.name}`, "", loc(app, "description") || "", "", `## ${t("docsInstall")}`, "", ...steps.map((step, index) => `${index + 1}. ${step}`)];
+    if (file && file.version) lines.push("", t("docsVersion", file.version));
+    return lines.join("\n");
+  }
+
+  function docsFileView(app, doc) {
+    const generated = !doc;
+    const text = generated ? fallbackReadme(app) : (doc.content || "");
+    const type = generated || doc.type === "markdown" ? "markdown" : "text";
+    const filename = generated ? t("docsGenerated") : (doc.filename || "");
+    const notice = [
+      generated ? `<p class="docs-note">${esc(t("docsMissing"))}</p>` : "",
+      !generated && doc.truncated ? `<p class="docs-note">${esc(t("docsTruncated"))}</p>` : "",
+    ].join("");
+    const rendered = type === "markdown"
+      ? `<article class="docs-md" dir="auto">${renderDocsMarkdown(text)}</article>`
+      : `<pre class="docs-plain" dir="ltr">${esc(text)}</pre>`;
+    return `
+      ${notice}
+      <div class="docs-toolbar">
+        <span class="docs-filename">${esc(filename)}</span>
+        <button class="btn btn-ghost btn-sm" type="button" data-action="docs-copy">${icon("copy")}<span>${esc(t("docsCopy"))}</span></button>
+      </div>
+      ${rendered}`;
+  }
+
+  function docsModal(id) {
+    const app = state.appsById.get(id);
+    if (!app) return emptyState(t("docsError"), t("docsError"), "alert");
+    const docs = state.docs && state.docs.id === id ? state.docs : { tab: 0, loading: true, error: "", files: [] };
+    const files = Array.isArray(docs.files) ? docs.files : [];
+    const tab = Math.min(Math.max(0, Number(docs.tab) || 0), Math.max(0, files.length - 1));
+    const tabs = files.length > 1
+      ? `<div class="segmented docs-tabs" role="tablist" aria-label="${esc(t("docsButton"))}">${files.map((file, index) => `<button type="button" role="tab" id="docs-tab-${index}" title="${esc(file.filename)}" aria-selected="${tab === index ? "true" : "false"}" aria-controls="docs-panel" data-action="docs-tab" data-tab="${index}" class="${tab === index ? "active" : ""}">${esc(file.filename)}</button>`).join("")}</div>`
+      : "";
+    let panel;
+    if (docs.loading) panel = `<div class="docs-empty"><p>${esc(t("docsLoading"))}</p></div>`;
+    else if (docs.error) {
+      panel = `<div class="docs-empty"><span class="empty-icon">${icon("alert")}</span><p>${esc(docs.error)}</p><button class="btn btn-secondary btn-sm" type="button" data-action="docs-retry" data-id="${esc(id)}">${esc(t("docsRetry"))}</button></div>`;
+    } else panel = docsFileView(app, files[tab] || null);
+    const labelledBy = files.length > 1 ? `docs-tab-${tab}` : "modal-title";
+    return `
+      <div class="modal-header">
+        ${appIcon(app.icon_url, app.name, "lg")}
+        <div class="modal-heading">
+          <h2 id="modal-title">${bdi(app.name)}</h2>
+          <div class="meta"><span>${esc(t("docsButton"))}</span></div>
+        </div>
+      </div>
+      ${tabs}
+      <div id="docs-panel" role="tabpanel" aria-labelledby="${labelledBy}" tabindex="0">${panel}</div>`;
+  }
+
+  function openDocs(id) {
+    state.docs = { id, tab: 0, loading: true, error: "", files: [] };
+    openModal({ type: "docs", id });
+    loadDocs(id);
+  }
+
+  async function loadDocs(id) {
+    try {
+      const files = await fetchJson(`/api/software/${encodeURIComponent(id)}/docs`);
+      if (!state.docs || state.docs.id !== id) return;
+      state.docs.files = Array.isArray(files) ? files : [];
+      state.docs.tab = 0;
+      state.docs.loading = false;
+      state.docs.error = "";
+    } catch (err) {
+      if (!state.docs || state.docs.id !== id) return;
+      state.docs.loading = false;
+      state.docs.error = err.message || t("docsError");
+    }
+    if (state.modal && state.modal.type === "docs" && state.modal.id === id) refreshModal();
+  }
+
+  function currentDocsText() {
+    const docs = state.docs;
+    if (!docs) return "";
+    const files = Array.isArray(docs.files) ? docs.files : [];
+    const doc = files[docs.tab] || files[0];
+    if (!doc) {
+      const app = state.appsById.get(docs.id);
+      return app ? fallbackReadme(app) : "";
+    }
+    return doc.content || "";
   }
 
   // ------------------------------------------------------------------ modal
 
   function openModal(modal) {
+    if (modal.type === "app" && isLockedKey(`app:${modal.id}`)) {
+      toast(t("stBlocked"), "info", 3500);
+      return;
+    }
     state.modal = modal;
     state.modalOs = "all";
+    state.modalSort = "date-desc";
+    state.modalPath = [];
     $("#modal-body").innerHTML = "";
     refreshModal();
     const el = $("#modal");
@@ -1584,6 +2339,10 @@
       $("#modal-body").innerHTML = formatsModal();
       return;
     }
+    if (state.modal.type === "docs") {
+      $("#modal-body").innerHTML = docsModal(state.modal.id);
+      return;
+    }
     const html = state.modal.type === "app" ? appModal(state.modal.id) : bundleModal(state.modal.id);
     if (html) $("#modal-body").innerHTML = html;
   }
@@ -1594,9 +2353,14 @@
     const latestPaths = new Set(Object.values(app.latest_by_os || {}).map((f) => f.rel_path));
     const preferred = preferredFile(app);
 
+    const blocked = isLockedKey(`app:${app.id}`);
+    const adminMaint = !blocked && isBlockedStatus(cardKeyStatus(`app:${app.id}`));
+    const noteFor = (path) => ((state.presentation && state.presentation.notes) || {})[path] || "";
     const primaryFiles = app.platforms.map((os) => app.latest_by_os[os]).filter(Boolean)
       .sort((a, b) => (a === preferred ? -1 : b === preferred ? 1 : 0));
-    const downloadButtons = primaryFiles.map((file, i) => {
+    const downloadButtons = blocked
+      ? `<button class="btn btn-secondary btn-lg" type="button" disabled title="${esc(t("stBlocked"))}">${icon("alert")}<span>${esc(t("stBlocked"))}</span></button>`
+      : (adminMaint ? `<span class="maint-admin-inline" title="${esc(t("stAdminBypass"))}">${icon("shield")}${esc(t("stAdminNote"))}</span>` : "") + primaryFiles.map((file, i) => {
       const label = primaryFiles.length > 1 ? t("downloadFor", osLabel(file.os)) : t("downloadLatest");
       const meta = [file.version ? `v${file.version}` : "", fileSize(file)].filter(Boolean).join(" · ");
       return `<button class="btn ${i === 0 ? "btn-primary" : "btn-secondary"} btn-lg" type="button" ${downloadAttrs(file)}>${icon("download")}<span>${esc(label)}</span>${meta ? `<span class="btn-meta">${esc(meta)}</span>` : ""}</button>`;
@@ -1606,20 +2370,63 @@
       ? `<div class="segmented">${["all", ...app.platforms].map((os) => `<button type="button" class="${state.modalOs === os ? "active" : ""}" data-action="modal-os" data-os="${esc(os)}">${esc(os === "all" ? t("all") : osLabel(os))}</button>`).join("")}</div>`
       : "";
 
-    const files = app.files.filter((f) => state.modalOs === "all" || f.os === state.modalOs);
-    const rows = files.map((f) => `
+    const files = app.files
+      .filter((f) => state.modalOs === "all" || f.os === state.modalOs)
+      .sort(fileSorters[state.modalSort] || fileSorters["date-desc"]);
+    const sortOptions = [
+      ["date-desc", t("fsDateDesc")], ["date-asc", t("fsDateAsc")],
+      ["version-desc", t("fsVersionDesc")], ["version-asc", t("fsVersionAsc")],
+      ["name-asc", t("fsNameAsc")], ["name-desc", t("fsNameDesc")],
+    ];
+    const sortSelect = `<select id="modal-sort" class="select select-sm" data-i18n-aria="sortBy">${
+      sortOptions.map(([v, label]) => `<option value="${v}"${state.modalSort === v ? " selected" : ""}>${esc(label)}</option>`).join("")}</select>`;
+
+    // Nested installers drill down folder by folder; a flat app keeps the plain table.
+    const useTree = files.some((f) => fileFolderSegs(app, f).length > 0);
+    let path = useTree ? state.modalPath.slice() : [];
+    const here = path.join("/");
+    const childMap = new Map();
+    files.forEach((f) => {
+      const segs = fileFolderSegs(app, f);
+      if (segs.length <= path.length || segs.slice(0, path.length).join("/") !== here) return;
+      const next = segs[path.length];
+      const rec = childMap.get(next) || { name: next, count: 0, ts: 0 };
+      rec.count += 1;
+      rec.ts = Math.max(rec.ts, f.modified_ts);
+      childMap.set(next, rec);
+    });
+    const folders = [...childMap.values()].sort(folderComparator());
+    const visibleFiles = useTree
+      ? files.filter((f) => fileFolderSegs(app, f).join("/") === here)
+      : files;
+
+    const crumbs = useTree ? [
+      `<button class="crumb" type="button" data-action="modal-folder-nav" data-depth="0">${icon("folder")}<span>${bdi(app.name)}</span></button>`,
+      ...path.map((seg, i) => `<span class="crumb-sep" aria-hidden="true">/</span><button class="crumb${i === path.length - 1 ? " is-current" : ""}" type="button" data-action="modal-folder-nav" data-depth="${i + 1}">${esc(seg)}</button>`),
+    ].join("") : "";
+    const breadcrumbHtml = useTree ? `<nav class="folder-crumbs" aria-label="${esc(t("folderBreadcrumb"))}">${crumbs}</nav>` : "";
+    const folderListHtml = useTree && folders.length ? `<div class="folder-list">${folders.map((fd) => `
+      <button class="folder-row" type="button" data-action="modal-folder-open" data-seg="${esc(fd.name)}">
+        <span class="folder-ico">${icon("folder")}</span>
+        <span class="folder-name">${esc(fd.name)}</span>
+        <span class="folder-meta">${esc(t("folderItems", fd.count))}</span>
+        ${icon("arrow", "icon-flip folder-go")}
+      </button>`).join("")}</div>` : "";
+
+    const rows = visibleFiles.map((f) => `
       <tr>
         <td>
           <div class="file-cell">
             <span class="file-name" title="${esc(f.rel_path)}">${esc(f.filename)}${latestPaths.has(f.rel_path) ? `<span class="badge">${esc(t("latest"))}</span>` : ""}</span>
+            ${noteFor(f.rel_path) ? `<span class="file-ctx">${esc(noteFor(f.rel_path))}</span>` : ""}
             ${f.bundle_files ? `<span class="file-ctx">${esc(t("bundleCtx", f.bundle_size_human, f.bundle_files))}</span>` : ""}
           </div>
         </td>
         <td>${versionTag(f.version)}</td>
         <td><span class="os-tag">${esc(osLabel(f.os))}</span></td>
-        <td class="num">${esc(f.modified)}</td>
         <td class="num">${esc(f.size_human)}</td>
-        <td class="actions-cell"><button class="btn btn-secondary btn-sm" type="button" ${downloadAttrs(f)}>${icon("download")}<span>${esc(t("download"))}</span></button></td>
+        <td class="num">${esc(f.modified)}</td>
+        <td class="actions-cell">${blocked ? `<button class="btn btn-ghost btn-sm" type="button" disabled title="${esc(t("stBlocked"))}">${esc(t("stSoon"))}</button>` : `<button class="btn btn-secondary btn-sm" type="button" ${downloadAttrs(f)}>${icon("download")}<span>${esc(t("download"))}</span></button>`}</td>
       </tr>`).join("");
 
     return `
@@ -1638,24 +2445,27 @@
         <div><dt>${esc(t("totalSize"))}</dt><dd class="mono">${esc(app.total_size_human)}</dd></div>
       </dl>
       <div class="download-bar">
+        <button class="btn btn-secondary btn-lg" type="button" data-action="open-docs" data-id="${esc(app.id)}">${icon("file")}<span>${esc(t("docsButton"))}</span></button>
         ${downloadButtons}
         ${app.homepage && shown("btn_homepage") ? `<a class="btn btn-ghost btn-lg" href="${esc(app.homepage)}" target="_blank" rel="noopener noreferrer">${icon("external")}<span>${esc(t("homepage"))}</span></a>` : ""}
-        ${isAdmin() && !(state.cardUpload && state.cardUpload.appId === app.id) ? `<button class="btn btn-secondary btn-lg card-upload-btn" type="button" data-action="card-upload-pick" data-id="${esc(app.id)}">${icon("upload")}<span>${esc(t("cuAdd"))}</span><span class="admin-chip">${icon("shield")}${esc(t("cuAdminOnly"))}</span></button>` : ""}
+        ${isAdmin() && !(state.cardUpload && state.cardUpload.appId === app.id) ? `<button class="btn btn-secondary btn-lg card-upload-btn" type="button" data-action="card-upload-open" data-id="${esc(app.id)}">${icon("upload")}<span>${esc(t("cuAdd"))}</span><span class="admin-chip">${icon("shield")}${esc(t("cuAdminOnly"))}</span></button>` : ""}
       </div>
       ${isAdmin() ? cardUploadPanel(app) : ""}
       <div class="table-head">
         <h3>${esc(t("officialInstallers"))} <span class="subtle mono">${app.files.length}</span></h3>
-        ${osFilter}
+        <div class="table-tools">${osFilter}${sortSelect}</div>
       </div>
-      <div class="table-wrap">
+      ${breadcrumbHtml}
+      ${folderListHtml}
+      ${visibleFiles.length ? `<div class="table-wrap">
         <table class="table">
           <thead><tr>
             <th>${esc(t("colFile"))}</th><th>${esc(t("colVersion"))}</th><th>${esc(t("colOs"))}</th>
-            <th>${esc(t("colDate"))}</th><th>${esc(t("colSize"))}</th><th></th>
+            <th>${esc(t("colSize"))}</th><th>${esc(t("colDate"))}</th><th>${esc(t("colActions"))}</th>
           </tr></thead>
-          <tbody>${rows || `<tr><td colspan="6" class="muted center">${esc(t("noFilesForOs"))}</td></tr>`}</tbody>
+          <tbody>${rows}</tbody>
         </table>
-      </div>`;
+      </div>` : `<p class="muted center folder-hint">${esc(useTree && folders.length ? t("folderPick") : t("noFilesForOs"))}</p>`}`;
   }
 
   // ------------------------------------------------ admin: add a file to an app
@@ -1667,8 +2477,9 @@
     if (!u || u.appId !== app.id) return "";
     const busy = CU_BUSY.has(u.status);
     const pct = u.size ? Math.min(100, Math.round((100 * u.loaded) / u.size)) : 0;
+    const hasFile = Boolean(u.file);
     const statusLine = {
-      ready: "", uploading: t("cuUploading", pct), saving: t("cuSaving"), syncing: t("cuSyncing"),
+      empty: "", ready: "", uploading: t("cuUploading", pct), saving: t("cuSaving"), syncing: t("cuSyncing"),
       done: t("cuLive"), hidden: t("cuSavedHidden"), error: u.error || "",
     }[u.status];
     const statusIcon = { done: "check", hidden: "alert", error: "alert" }[u.status] || (busy ? "refresh" : "");
@@ -1682,26 +2493,34 @@
           </div>
           <button class="icon-btn" type="button" data-action="card-upload-close" title="${esc(t("close"))}" aria-label="${esc(t("close"))}"${busy ? " disabled" : ""}>${icon("x")}</button>
         </div>
-        <div class="card-upload-file">
+        ${busy || u.status === "done" ? "" : `<div class="upload-dropzone" data-id="${esc(app.id)}" tabindex="0" role="button">
+          ${icon("upload")}
+          <strong>${esc(t("cuDrop"))}</strong>
+        </div>`}
+        ${hasFile ? `<div class="card-upload-file">
           ${icon("file")}
           <span class="file-name">${esc(u.name)}</span>
           <span class="mono subtle" dir="ltr">${esc(humanBytes(u.size))}</span>
-        </div>
-        <div class="card-upload-grid">
+        </div>` : ""}
+        <div class="card-upload-grid cu-form">
           <label class="field">
             <span class="fb-label">${esc(t("cuFolder"))}</span>
             <input class="input mono" id="cu-folder" dir="ltr" maxlength="64" autocomplete="off" spellcheck="false" value="${esc(u.folder)}" placeholder="${esc(u.suggested || "1.2.3")}"${busy || u.status === "done" ? " disabled" : ""}>
             <span class="hint">${esc(t("cuFolderHint"))}</span>
           </label>
-          ${u.exists || u.overwrite ? `<label class="check cu-overwrite"><input type="checkbox" id="cu-overwrite"${u.overwrite ? " checked" : ""}${busy ? " disabled" : ""}><span>${esc(t("cuOverwrite"))}</span></label>` : ""}
+          <label class="field">
+            <span class="fb-label">${esc(t("cuNotes"))}</span>
+            <textarea class="textarea cu-notes" id="cu-notes" maxlength="2000" placeholder="${esc(t("cuNotesPh"))}"${busy || u.status === "done" ? " disabled" : ""}>${esc(u.notes || "")}</textarea>
+          </label>
+          ${u.exists || u.overwrite ? `<label class="cu-overwrite"><input type="checkbox" id="cu-overwrite"${u.overwrite ? " checked" : ""}${busy ? " disabled" : ""}><span>${esc(t("cuOverwrite"))}</span></label>` : ""}
         </div>
-        ${u.status === "uploading" ? `<span class="q-progress card-upload-bar" aria-hidden="true"><span id="cu-bar" style="width:${pct}%"></span></span>` : ""}
+        ${u.status === "uploading" || u.status === "saving" ? `<span class="q-progress card-upload-bar" aria-hidden="true"><span id="cu-bar" style="width:${pct}%"></span></span>` : ""}
         <div class="card-upload-foot">
           <span class="card-upload-status" id="cu-status" role="status">${statusIcon ? icon(statusIcon) : ""}<span>${esc(statusLine)}</span></span>
           <span class="card-upload-actions">
             ${u.status === "uploading" ? `<button class="btn btn-ghost btn-sm" type="button" data-action="card-upload-cancel">${esc(t("upCancel"))}</button>` : ""}
-            ${!busy ? `<button class="btn btn-ghost btn-sm" type="button" data-action="card-upload-pick" data-id="${esc(app.id)}">${esc(t("cuChoose"))}</button>` : ""}
-            ${["ready", "error"].includes(u.status) ? `<button class="btn btn-primary btn-sm" type="button" data-action="card-upload-send">${icon("upload")}<span>${esc(t("cuUpload"))}</span></button>` : ""}
+            ${!busy && hasFile ? `<button class="btn btn-ghost btn-sm" type="button" data-action="card-upload-pick" data-id="${esc(app.id)}">${esc(t("cuChoose"))}</button>` : ""}
+            ${["empty", "ready", "error"].includes(u.status) ? `<button class="btn btn-primary btn-sm" type="button" data-action="card-upload-send"${hasFile && !(u.status === "error" && !u.file) ? "" : " disabled"}>${icon("upload")}<span>${esc(t("cuUpload"))}</span></button>` : ""}
           </span>
         </div>
       </section>`;
@@ -1714,6 +2533,48 @@
     if (state.modal && state.modal.type === "app" && app) {
       if (el) el.outerHTML = cardUploadPanel(app);
       else refreshModal();
+    }
+  }
+
+  function openStatusMenu(key, anchor) {
+    const menu = $("#status-menu");
+    if (!menu || !key || !anchor) return;
+    const tool = key.startsWith("tool:") ? key.slice(5) : "";
+    const current = tool && isActionHidden(tool) ? "hidden" : cardKeyStatus(key);
+    const items = [["active", t("stActive")], ["construction", `🚧 ${t("stConstruction")}`], ["soon", `⏳ ${t("stSoon")}`]];
+    if (tool) items.push(["hidden", `🙈 ${t("actHidden")}`]);
+    menu.innerHTML = items.map(([status, label]) => `<button type="button" role="menuitem" data-action="card-status-set" data-key="${esc(key)}" data-status="${status}" class="${status === current ? "is-current" : ""}">${esc(label)}</button>`).join("");
+    menu.hidden = false;
+    const rect = anchor.getBoundingClientRect();
+    menu.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 150)}px`;
+    menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 220))}px`;
+  }
+
+  async function setCardStatus(key, status) {
+    const menu = $("#status-menu");
+    if (menu) menu.hidden = true;
+    const tool = key.startsWith("tool:") ? key.slice(5) : "";
+    if (tool && status === "hidden") {
+      if (!isActionHidden(tool)) await setActionVisibility(tool, true);
+      return;
+    }
+    try {
+      const response = await fetch("/api/manage/card-status", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-PAKAL-Request": "1" },
+        body: JSON.stringify({ key, status }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const next = { ...(state.presentation.status || {}) };
+      if (status === "active") delete next[key];
+      else next[key] = status;
+      state.presentation = { ...state.presentation, status: next };
+      renderAll();
+      if (tool && isActionHidden(tool)) await setActionVisibility(tool, false);
+      else toast(t("stSaved"), "success", 2200);
+    } catch (err) {
+      toast(`${t("stMenu")} (${err.message})`, "error");
     }
   }
 
@@ -1735,9 +2596,11 @@
     if (exts.length && !exts.some((ext) => lower.endsWith(ext))) error = t("cuBadType", exts.join(" "));
     else if (admin.upload_max_mb && file.size > admin.upload_max_mb * 1024 * 1024) error = t("cuTooLarge", admin.upload_max_mb);
     const version = (file.name.match(/\d+(?:\.\d+){1,3}/) || [""])[0];
+    const prev = state.cardUpload && state.cardUpload.appId === appId ? state.cardUpload : null;
     state.cardUpload = {
-      appId, file, name: file.name, size: file.size, loaded: 0, folder: "", suggested: version,
-      overwrite: false, exists: false, status: error ? "error" : "ready", error, xhr: null, relPath: "",
+      appId, file: error ? null : file, name: file.name, size: file.size, loaded: 0,
+      folder: prev ? prev.folder : "", suggested: version, overwrite: false, exists: false,
+      notes: prev ? prev.notes : "", status: error ? "error" : "ready", error, xhr: null, relPath: "",
     };
     refreshModal();
     const folder = $("#cu-folder");
@@ -1746,16 +2609,17 @@
 
   function sendCardUpload() {
     const u = state.cardUpload;
-    if (!u || CU_BUSY.has(u.status)) return;
-    const params = new URLSearchParams({ filename: u.name });
-    if (u.folder.trim()) params.set("folder", u.folder.trim());
-    if (u.overwrite) params.set("overwrite", "true");
+    if (!u || !u.file || CU_BUSY.has(u.status)) return;
+    const body = new FormData();
+    body.append("file", u.file, u.name);
+    body.append("folder", u.folder.trim());
+    body.append("notes", u.notes || "");
+    body.append("overwrite", u.overwrite ? "true" : "false");
     const xhr = new XMLHttpRequest();
     Object.assign(u, { status: "uploading", loaded: 0, error: "", xhr });
     rerenderCardUpload();
-    xhr.open("PUT", `/api/manage/apps/${encodeURIComponent(u.appId)}/files?${params}`);
+    xhr.open("POST", `/api/apps/${encodeURIComponent(u.appId)}/installers`);
     xhr.setRequestHeader("X-PAKAL-Request", "1");
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.upload.onprogress = (e) => {
       if (!e.lengthComputable || state.cardUpload !== u) return;
       u.loaded = e.loaded;
@@ -1777,12 +2641,17 @@
       let body = null;
       try { body = JSON.parse(xhr.responseText); } catch (_) { /* non-JSON */ }
       if (state.cardUpload !== u) {
-        if (xhr.status === 201) watchScan({ expectChange: true });
+        if (xhr.status === 200 || xhr.status === 201) watchScan({ expectChange: true });
         return;
       }
-      if (xhr.status === 201) {
-        Object.assign(u, { status: "syncing", xhr: null, relPath: body.rel_path, loaded: u.size });
+      if (xhr.status === 200 || xhr.status === 201) {
+        if (body && body.rel_path && u.notes && body.notes_saved !== false) {
+          state.presentation = state.presentation || { status: {}, notes: {} };
+          state.presentation.notes = { ...(state.presentation.notes || {}), [body.rel_path]: u.notes };
+        }
+        Object.assign(u, { status: "syncing", xhr: null, relPath: body && body.rel_path, loaded: u.size });
         rerenderCardUpload();
+        if (body && body.notes_saved === false) toast(t("cuNotesFailed"), "error", 6000);
         watchScan({ expectChange: true });
         return;
       }
@@ -1790,7 +2659,7 @@
       const detail = body && body.detail;
       fail(xhr.status === 409 ? t("cuExists") : Array.isArray(detail) ? detail.map((d) => d.msg).join(" · ") : detail || `${xhr.status}`);
     };
-    xhr.send(u.file);
+    xhr.send(body);
   }
 
   // Called after every catalog refresh: a synced upload is "live" once its file shows up in the app.
@@ -1814,13 +2683,14 @@
     const apps = bundle.apps.map((appId) => state.appsById.get(appId)).filter(Boolean);
     const rows = apps.map((app) => {
       const file = preferredFile(app);
+      const locked = isLockedKey(`app:${app.id}`);
       return `
-        <tr>
+        <tr class="${locked ? "is-locked" : ""}"${locked ? ` title="${esc(t("stBlocked"))}"` : ""}>
           <td><button class="link-btn" type="button" data-action="open-app" data-id="${esc(app.id)}">${appIcon(app.icon_url, app.name, "xs")}<span>${bdi(app.name)}</span></button></td>
           <td>${versionTag((file && file.version) || app.latest_version)}</td>
           <td>${file ? `<span class="os-tag">${esc(osLabel(file.os))}</span>` : ""}</td>
           <td class="num">${esc(fileSize(file))}</td>
-          <td class="actions-cell">${file ? `<button class="btn btn-secondary btn-sm" type="button" ${downloadAttrs(file)}>${icon("download")}<span>${esc(t("download"))}</span></button>` : ""}</td>
+          <td class="actions-cell">${file ? `<button class="btn btn-secondary btn-sm" type="button" ${locked ? `disabled title="${esc(t("stBlocked"))}"` : downloadAttrs(file)}>${icon("download")}<span>${esc(t("download"))}</span></button>` : ""}</td>
         </tr>`;
     }).join("");
 
@@ -1883,6 +2753,8 @@
     state.appsById = new Map(state.apps.map((a) => [a.id, a]));
     state.bundles = data.bundles || [];
     state.platforms = data.platforms || [];
+    state.repositories = data.repositories || [];
+    state.actionsCatalog = data.actions || [];
     state.categories = data.categories || [];
     state.scan = data.scan || null;
     state.loadError = null;
@@ -1931,8 +2803,15 @@
       state.loading = true;
       renderAll();
     }
+    const presentation = fetchJson("/api/manage/presentation")
+      .then((p) => {
+        state.presentation = { status: {}, notes: {}, hidden_actions: [], ...(p || {}) };
+        const tool = state.actions.tool;
+        if (tool && !isAdmin() && (isActionHidden(tool) || isLockedKey(`tool:${tool}`))) openTool(null);
+      })
+      .catch(() => {});
     try {
-      const data = await fetchJson(API.apps);
+      const [data] = await Promise.all([fetchJson(API.apps), presentation]);
       applyCatalog(data);
       if (data.scan && data.scan.scanning && !data.apps.length) state.loading = true;
     } catch (err) {
@@ -1991,7 +2870,10 @@
     tabStore.set(SSO_TRIED_KEY, "1");
     if (!silent) tabStore.del(ADMIN_NO_AUTO_KEY);
     const params = new URLSearchParams({ next: window.location.pathname + window.location.search + window.location.hash });
-    if (silent) params.set("silent", "1");
+    if (silent) {
+      params.set("silent", "1");
+      params.set("auto", "1");
+    }
     window.location.assign(`/api/auth/sso/login?${params}`);
   }
 
@@ -2007,30 +2889,49 @@
     return result;
   }
 
+  function canSignIn(auth) {
+    return Boolean(auth && (auth.login_enabled || auth.sso_enabled || auth.ldap_enabled));
+  }
+
   function renderUser() {
     const slot = $("#user-slot");
     const auth = state.auth;
-    if (!auth || (!auth.sso_enabled && !auth.ldap_enabled && !auth.authenticated)) {
-      slot.innerHTML = "";
+    if (!slot || !auth || (!canSignIn(auth) && !auth.authenticated)) {
+      if (slot) slot.innerHTML = "";
+      const logout = $("#logout-slot");
+      if (logout) logout.innerHTML = "";
       return;
     }
     if (auth.authenticated) {
       const u = auth.user;
       const tip = [u.name, u.username, u.email].filter(Boolean).join(" · ");
+      const welcome = state.lang === "he"
+        ? `<span class="user-welcome" dir="rtl"><bdo dir="rtl">${esc(t("welcomeLead"))}, </bdo><bdo class="user-welcome-name" dir="ltr">${esc(u.name)}</bdo></span>`
+        : `<span class="user-welcome" dir="ltr"><bdo dir="ltr">${esc(t("welcomeLead"))}, ${esc(u.name)}</bdo></span>`;
       slot.innerHTML = `
-        <span class="user-chip" title="${esc(tip)}"><span class="user-avatar">${esc(nameInitials(u.name))}</span><span class="user-name">${bdi(u.name)}</span></span>
-        <button class="icon-btn bordered" type="button" data-action="logout" title="${esc(t("signOut"))}" aria-label="${esc(t("signOut"))}">${icon("logout")}</button>`;
+        <span class="user-chip" dir="${state.lang === "he" ? "rtl" : "ltr"}" title="${esc(tip)}"><span class="user-avatar">${esc(nameInitials(u.name))}</span>${welcome}</span>`;
+      const logout = $("#logout-slot");
+      if (logout) logout.innerHTML = `<button class="icon-btn" type="button" data-action="logout" title="${esc(t("signOut"))}" aria-label="${esc(t("signOut"))}">${icon("logout")}</button>`;
     } else {
       slot.innerHTML = `<button class="btn btn-secondary btn-sm sign-in-btn" type="button" data-action="login">${icon("login")}<span>${esc(t("signIn"))}</span></button>`;
+      const logout = $("#logout-slot");
+      if (logout) logout.innerHTML = "";
     }
   }
 
   // Everything whose visibility depends on who is signed in: user chip, admin link, admin card controls.
+  let renderedAsAdmin = false;
   function renderIdentity() {
     renderUser();
     renderAdminLink();
     if (!isAdmin() && state.cardUpload && !CU_BUSY.has(state.cardUpload.status)) state.cardUpload = null;
-    if (state.modal && state.modal.type !== "signin") refreshModal();
+    if (isAdmin() !== renderedAsAdmin) {
+      renderedAsAdmin = isAdmin();
+      renderAll();
+      renderActionsPanels();
+      const tool = state.actions.tool;
+      if (tool && !renderedAsAdmin && (isActionHidden(tool) || isLockedKey(`tool:${tool}`))) openTool(null);
+    } else if (state.modal && state.modal.type !== "signin") refreshModal();
     emit("auth", state.auth);
   }
 
@@ -2149,15 +3050,51 @@
     }
   }
 
+  function dismissSplash() {
+    if (typeof window.PAKAL_DISMISS_SPLASH === "function") {
+      window.PAKAL_DISMISS_SPLASH();
+      return;
+    }
+    const splash = document.getElementById("app-splash-screen");
+    if (!splash || splash.classList.contains("is-leaving")) return;
+    splash.classList.add("is-leaving");
+    splash.setAttribute("aria-busy", "false");
+    const remove = () => { if (splash.isConnected) splash.remove(); };
+    splash.addEventListener("transitionend", (event) => {
+      if (event.target === splash && event.propertyName === "opacity") remove();
+    });
+    window.setTimeout(remove, 500);
+  }
+
+  function canAutoSso(auth, result) {
+    if (!auth || auth.authenticated || !auth.sso_enabled || auth.sso_reachable === false) return false;
+    if (result) return false;
+    if (tabStore.get(SSO_TRIED_KEY) || tabStore.get(SSO_RELOGIN_KEY)) return false;
+    return true;
+  }
+
   async function initAuth() {
     const result = takeSsoResult();
-    try {
-      state.auth = await fetchJson("/api/auth/me");
-    } catch (_) {
-      state.auth = null;
+    const caption = document.querySelector("#app-splash-screen .splash-caption");
+    if (caption) caption.textContent = t("splashCaption");
+    const pending = fetchJson("/api/auth/me").then((data) => {
+      state.auth = data;
+      return data;
+    }).catch((err) => {
+      const message = String(err && err.message || "");
+      state.auth = /^\s*401\b/.test(message) ? { authenticated: false, sso_enabled: true, login_enabled: true } : null;
+      return state.auth;
+    });
+    const auth = (await Promise.all([
+      pending,
+      new Promise((resolve) => window.setTimeout(resolve, 1000)),
+    ]))[0];
+    if (canAutoSso(auth, result)) {
+      ssoLogin(true);
+      return;
     }
     renderIdentity();
-    const auth = state.auth;
+    dismissSplash();
     const relogin = tabStore.get(SSO_RELOGIN_KEY);
     if (!auth || auth.authenticated || !auth.sso_enabled) {
       tabStore.del(SSO_RELOGIN_KEY);
@@ -2184,8 +3121,6 @@
       return;
     }
     if (result === "error") toast(t("ssoFailed"), "error", 5000);
-    if (result) return;
-    if (auth.sso_reachable && !tabStore.get(SSO_TRIED_KEY)) ssoLogin(true);
   }
 
   function signInModal() {
@@ -2399,6 +3334,141 @@
     }
   }
 
+  // --------------------------------------------------------------- PyPI catalog
+
+  function pipCommand(name) {
+    const index = state.pypi.indexUrl || "";
+    return `pip install --index-url ${index} ${name}`;
+  }
+
+  function copyWithTextarea(text) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    if (!ok) throw new Error("copy");
+  }
+
+  async function copyPip(text, okKey = "pypiCopied", failKey = "pypiCopyFailed", timeout = 1800) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else copyWithTextarea(text);
+      toast(t(okKey), "success", timeout);
+    } catch (_) {
+      try {
+        copyWithTextarea(text);
+        toast(t(okKey), "success", timeout);
+      } catch (err) {
+        toast(t(failKey), "error");
+      }
+    }
+  }
+
+  function pypiCard(pkg) {
+    const wheel = (pkg.files || []).find((f) => f.kind === "wheel");
+    const file = wheel || (pkg.files || [])[0];
+    const tags = (pkg.tags || []).map((tag) => `<span class="badge badge-neutral">${esc(tag)}</span>`).join("");
+    const when = file && file.uploaded ? new Date(file.uploaded).toLocaleDateString(state.lang === "he" ? "he-IL" : "en-GB") : "";
+    const download = wheel
+      ? `<a class="btn btn-secondary btn-sm" href="/api/pypi/download?path=${encodeURIComponent(wheel.path)}">${icon("download")}<span>${esc(t("pypiDownload"))}</span></a>`
+      : "";
+    const command = pipCommand(pkg.name);
+    return `
+      <article class="card pypi-card">
+        <header class="pypi-head">
+          <h3 class="pypi-name" dir="ltr">${esc(pkg.name)}</h3>
+          ${pkg.latest ? `<span class="badge badge-accent">${esc(pkg.latest)}</span>` : ""}
+        </header>
+        <p class="pypi-meta">${esc(t("pypiFiles", (pkg.files || []).length))} · ${esc(t("pypiVersions", (pkg.versions || []).length))}${when ? ` · <span dir="ltr">${esc(when)}</span>` : ""}</p>
+        ${tags ? `<div class="pypi-tags">${tags}</div>` : ""}
+        <div class="pypi-cmd" dir="ltr">
+          <code>${esc(command)}</code>
+          <button class="btn btn-ghost btn-sm" type="button" data-action="pypi-copy" data-value="${esc(command)}" title="${esc(t("pypiCopy"))}" aria-label="${esc(t("pypiCopy"))}">${icon("copy")}</button>
+        </div>
+        ${file ? `<div class="pypi-file"><span class="file-name">${esc(file.filename)}</span><span class="num">${esc(humanBytes(file.size || 0))}</span>${download}</div>` : ""}
+      </article>`;
+  }
+
+  function renderPypi() {
+    const root = $("#pypi-root");
+    if (!root) return;
+    const p = state.pypi;
+    const head = `
+      <div class="page-head">
+        <div>
+          <h2 class="page-title">${esc(t("pypiTitle"))}</h2>
+          <p class="page-subtitle">${esc(t("pypiSubtitle"))}${p.repository ? ` <span class="dk-registry" dir="ltr">${esc(p.repository)}</span>` : ""}</p>
+        </div>
+        <div class="toolbar dk-toolbar">
+          <label class="search dk-search">
+            ${icon("search")}
+            <input type="search" id="pypi-search" autocomplete="off" spellcheck="false" value="${esc(p.q)}" placeholder="${esc(t("pypiSearch"))}" aria-label="${esc(t("pypiSearch"))}">
+          </label>
+          <button class="btn btn-secondary" type="button" data-action="pypi-refresh" ${p.loading ? "disabled" : ""}>${icon("refresh")}<span>${esc(t("pypiRefresh"))}</span></button>
+        </div>
+      </div>`;
+    let body;
+    if (p.loading && !p.packages) {
+      body = `<div class="pypi-grid">${'<div class="card pypi-card pypi-skeleton"></div>'.repeat(6)}</div>`;
+    } else if (p.error && !p.packages) {
+      const missing = /not configured/i.test(p.error);
+      body = emptyState(missing ? t("pypiNotConfigured") : t("pypiLoadError"), missing ? t("pypiNotConfiguredText") : p.error, missing ? "package" : "alert",
+        `<button class="btn btn-secondary" type="button" data-action="pypi-refresh">${icon("refresh")}<span>${esc(t("pypiRetry"))}</span></button>`);
+    } else if (p.packages && !p.packages.length) {
+      body = emptyState(p.q ? t("pypiNoMatch") : t("pypiEmpty"), p.q ? t("pypiNoMatchText") : t("pypiEmptyText"), p.q ? "search" : "package");
+    } else if (p.packages) {
+      body = `
+        ${p.truncated ? `<div class="notice">${icon("alert")}<span>${esc(t("pypiTruncated"))}</span></div>` : ""}
+        <div class="results-line"><span>${esc(t("pypiCount", p.packages.length))}</span></div>
+        <div class="pypi-grid">${p.packages.map(pypiCard).join("")}</div>`;
+    } else {
+      body = `<div class="pypi-grid">${'<div class="card pypi-card pypi-skeleton"></div>'.repeat(6)}</div>`;
+    }
+    const focused = document.activeElement && document.activeElement.id === "pypi-search";
+    const caret = focused ? document.activeElement.selectionStart : null;
+    root.innerHTML = head + body;
+    if (focused) {
+      const input = $("#pypi-search");
+      if (input) {
+        input.focus();
+        if (caret !== null) input.setSelectionRange(caret, caret);
+      }
+    }
+  }
+
+  async function loadPypi({ fresh = false } = {}) {
+    const seq = ++state.pypi.seq;
+    if (!state.pypi.packages) state.pypi.loading = true;
+    renderPypi();
+    const params = new URLSearchParams();
+    if (state.pypi.q.trim()) params.set("q", state.pypi.q.trim());
+    if (fresh) params.set("fresh", "1");
+    try {
+      const data = await fetchJson(`/api/pypi/packages?${params}`);
+      if (seq !== state.pypi.seq) return;
+      state.pypi.packages = data.packages || [];
+      state.pypi.indexUrl = data.index_url || "";
+      state.pypi.repository = data.repository || "";
+      state.pypi.truncated = Boolean(data.truncated);
+      state.pypi.error = "";
+    } catch (err) {
+      if (seq !== state.pypi.seq) return;
+      state.pypi.error = err.message;
+      if (!state.pypi.packages) state.pypi.packages = null;
+    } finally {
+      if (seq === state.pypi.seq) {
+        state.pypi.loading = false;
+        renderPypi();
+      }
+    }
+  }
+
+  const schedulePypiSearch = debounce(() => loadPypi(), 200);
+
   // ------------------------------------------------------------------- i18n
 
   function applyLanguage(lang) {
@@ -2414,6 +3484,7 @@
     renderBanner();
     renderAll();
     renderActions();
+    renderPypi();
     renderAnnouncement();
     emit("lang", state.lang);
   }
@@ -2430,6 +3501,7 @@
       renderActionsPanels();
       if (!state.actions.running && !state.actions.aborting) loadActionsConfig();
     }
+    if (state.view === "pypi" && state.pypi.packages === null && !state.pypi.loading) loadPypi();
     emit("view", state.view);
     if (state.view === "actions") emit("actions-tool", state.actions.tool);
   }
@@ -2441,8 +3513,10 @@
 
   function setSearch(value, source) {
     state.search = value;
-    if (source !== "search") $("#search").value = value;
-    if (source !== "hero-search") $("#hero-search").value = value;
+    const headerSearch = $("#search");
+    const hero = $("#hero-search");
+    if (headerSearch && source !== "search") headerSearch.value = value;
+    if (hero && source !== "hero-search") hero.value = value;
     syncSearchClear(value);
   }
 
@@ -2451,10 +3525,59 @@
     $$(".search-clear").forEach((btn) => { btn.hidden = !value; });
   }
 
-  function focusSearch() {
-    const input = state.view === "home" ? $("#hero-search") : $("#search");
+  let qsActive = 0;
+
+  function quickMatches(query) {
+    const terms = String(query || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return [];
+    return state.apps.filter((app) => {
+      const haystack = [app.name, app.folder, app.description_he, app.description_en, ...(app.tags || [])].join(" ").toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    }).slice(0, 8);
+  }
+
+  function renderQuickSearch() {
+    const input = $("#qs-input");
+    const host = $("#qs-results");
+    if (!input || !host) return;
+    const query = input.value;
+    const hits = quickMatches(query);
+    if (!query.trim()) {
+      host.innerHTML = `<p class="qs-hint">${esc(t("qsHint"))}</p>`;
+      return;
+    }
+    if (!hits.length) {
+      host.innerHTML = `<p class="qs-hint">${esc(t("qsEmpty"))}</p>`;
+      return;
+    }
+    qsActive = Math.min(qsActive, hits.length - 1);
+    host.innerHTML = hits.map((app, index) => `
+      <button type="button" class="qs-hit${index === qsActive ? " is-active" : ""}" data-action="qs-open" data-id="${esc(app.id)}" role="option">
+        <strong>${esc(app.name)}</strong>
+        <span class="muted" dir="ltr">${esc(app.latest_version || "")}</span>
+      </button>`).join("")
+      + `<button type="button" class="qs-catalog" data-action="qs-catalog">${esc(t("qsCatalog"))}</button>`;
+  }
+
+  function openQuickSearch() {
+    const root = $("#quick-search");
+    const input = $("#qs-input");
+    if (!root || !input) return;
+    root.hidden = false;
+    input.value = state.search || "";
+    qsActive = 0;
+    renderQuickSearch();
     input.focus();
     input.select();
+  }
+
+  function closeQuickSearch() {
+    const root = $("#quick-search");
+    if (root) root.hidden = true;
+  }
+
+  function focusSearch() {
+    openQuickSearch();
   }
 
   function routeFromHash() {
@@ -2480,20 +3603,68 @@
   function handleAction(el, event) {
     switch (el.dataset.action) {
       case "open-app":
+        if (isLockedKey(`app:${el.dataset.id}`)) {
+          toast(t("stBlocked"), "info", 3500);
+          break;
+        }
         openModal({ type: "app", id: el.dataset.id });
         history.replaceState(null, "", `#app/${encodeURIComponent(el.dataset.id)}`);
         break;
       case "open-bundle":
         openModal({ type: "bundle", id: el.dataset.id });
         break;
+      case "open-docs":
+        event.stopPropagation();
+        openDocs(el.dataset.id);
+        break;
+      case "docs-tab":
+        if (state.docs) {
+          const index = Number(el.dataset.tab);
+          state.docs.tab = Number.isFinite(index) ? index : 0;
+          refreshModal();
+          const selected = document.getElementById(`docs-tab-${state.docs.tab}`);
+          if (selected) selected.focus();
+        }
+        break;
+      case "docs-retry":
+        openDocs(el.dataset.id);
+        break;
+      case "docs-copy":
+        copyPip(currentDocsText(), "docsCopied", "docsCopyFailed");
+        break;
+      case "docs-copy-code": {
+        const pre = el.closest(".docs-code") && el.closest(".docs-code").querySelector("pre");
+        if (pre) copyPip(pre.textContent || "", "docsCopied", "docsCopyFailed");
+        break;
+      }
       case "download":
         event.stopPropagation();
+        if (el.closest(".is-locked")) {
+          toast(t("stBlocked"), "info", 3500);
+          break;
+        }
         triggerDownload(el.dataset.url, el.dataset.name);
         toast(t("downloadStarted", el.dataset.name), "info", 2500);
         break;
       case "download-bundle":
         event.stopPropagation();
         downloadBundle(el.dataset.id);
+        break;
+      case "ps-download":
+        toast(t("psDownloadStarted"), "success", 4500);
+        break;
+      case "ps-reload":
+        loadPowershell();
+        break;
+      case "ps-apps":
+        setSearch("PowerShell", "ps");
+        setView("apps");
+        break;
+      case "pypi-copy":
+        copyPip(el.dataset.value || "");
+        break;
+      case "pypi-refresh":
+        loadPypi({ fresh: true });
         break;
       case "goto":
         setView(el.dataset.view);
@@ -2502,6 +3673,25 @@
         state.category = el.dataset.category;
         renderApps();
         break;
+      case "quick-search":
+        openQuickSearch();
+        break;
+      case "qs-dismiss":
+        if (event.target === el) closeQuickSearch();
+        break;
+      case "qs-open":
+        closeQuickSearch();
+        openModal({ type: "app", id: el.dataset.id });
+        history.replaceState(null, "", `#app/${encodeURIComponent(el.dataset.id)}`);
+        break;
+      case "qs-catalog": {
+        const query = ($("#qs-input") && $("#qs-input").value) || "";
+        closeQuickSearch();
+        setSearch(query, "qs");
+        setView("apps");
+        renderApps();
+        break;
+      }
       case "clear-search": {
         const input = el.closest(".search").querySelector("input");
         setSearch("", null);
@@ -2520,6 +3710,20 @@
         state.modalOs = el.dataset.os;
         refreshModal();
         break;
+      case "modal-folder-open":
+        state.modalPath = state.modalPath.concat(el.dataset.seg || "");
+        refreshModal();
+        break;
+      case "modal-folder-nav":
+        state.modalPath = state.modalPath.slice(0, parseInt(el.dataset.depth, 10) || 0);
+        refreshModal();
+        break;
+      case "toggle-guide": {
+        state.guideOpen = !state.guideOpen;
+        try { localStorage.setItem(GUIDE_KEY, state.guideOpen ? "1" : "0"); } catch (_) { /* storage blocked */ }
+        renderHome();
+        break;
+      }
       case "reload":
         loadCatalog();
         break;
@@ -2533,15 +3737,17 @@
         closeModal();
         break;
       case "login":
+        // A manual sign-in always wins: drop any pending relogin countdown/flags so the click is never a no-op.
         tabStore.del(SSO_RELOGIN_KEY);
+        stopRelogin();
         if (state.auth && state.auth.ldap_enabled) {
-          stopRelogin();
           renderBanner();
           openModal({ type: "signin" });
         } else ssoLogin(false);
         break;
       case "signin-sso":
         tabStore.del(SSO_RELOGIN_KEY);
+        stopRelogin();
         ssoLogin(false);
         break;
       case "feedback-signin":
@@ -2551,6 +3757,17 @@
         break;
       case "announcement-read":
         dismissAnnouncement();
+        break;
+      case "card-upload-open":
+        if (isAdmin() && !(state.cardUpload && CU_BUSY.has(state.cardUpload.status))) {
+          state.cardUpload = {
+            appId: el.dataset.id, file: null, name: "", size: 0, loaded: 0, folder: "", suggested: "",
+            overwrite: false, exists: false, notes: "", status: "empty", error: "", xhr: null, relPath: "",
+          };
+          refreshModal();
+          const panel = $("#card-upload");
+          if (panel) panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
         break;
       case "card-upload-pick":
         if (isAdmin()) pickCardUpload(el.dataset.id);
@@ -2577,7 +3794,46 @@
         cancelRelogin();
         break;
       case "hub-open":
+        if (el.closest(".is-locked") || isLockedKey(`tool:${el.dataset.tool}`)) {
+          toast(t("stBlocked"), "info", 3500);
+          break;
+        }
         openTool(el.dataset.tool, { push: true });
+        break;
+      case "action-link": {
+        const url = el.dataset.url;
+        if (url) window.open(url, "_blank", "noopener");
+        break;
+      }
+      case "action-download": {
+        const url = el.dataset.url;
+        if (url) {
+          const link = document.createElement("a");
+          link.href = url;
+          link.rel = "noopener";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
+        break;
+      }
+      case "repo-open": {
+        const tech = el.dataset.tech;
+        if (tech === "docker" && shown("tab_docker")) setView("docker");
+        else if (tech === "pypi" && shown("tab_pypi")) setView("pypi");
+        break;
+      }
+      case "action-visibility":
+        event.stopPropagation();
+        toggleActionVisibility(el.dataset.tool);
+        break;
+      case "card-status-menu":
+        event.stopPropagation();
+        openStatusMenu(el.dataset.key, el);
+        break;
+      case "card-status-set":
+        event.stopPropagation();
+        setCardStatus(el.dataset.key, el.dataset.status);
         break;
       case "hub-back":
         backToHub();
@@ -2653,21 +3909,72 @@
 
   function bindEvents() {
     document.addEventListener("click", (event) => {
+      const menu = $("#status-menu");
+      if (menu && !menu.hidden && !menu.contains(event.target) && !event.target.closest(".card-status-btn")) menu.hidden = true;
+      const zone = event.target.closest(".upload-dropzone");
+      if (zone) {
+        if (!(state.cardUpload && CU_BUSY.has(state.cardUpload.status))) pickCardUpload(zone.dataset.id);
+        return;
+      }
       const el = event.target.closest("[data-action]");
       if (el && !el.disabled) handleAction(el, event);
     });
 
+    document.addEventListener("contextmenu", (event) => {
+      if (!isAdmin()) return;
+      const card = event.target.closest("[data-status-key]");
+      if (!card) return;
+      event.preventDefault();
+      openStatusMenu(card.dataset.statusKey, { getBoundingClientRect: () => ({ top: event.clientY, bottom: event.clientY, left: event.clientX }) });
+    });
+    document.addEventListener("dragover", (event) => {
+      const zone = event.target.closest && event.target.closest(".upload-dropzone");
+      if (!zone) return;
+      event.preventDefault();
+      zone.classList.add("is-drag");
+    });
+    document.addEventListener("dragleave", (event) => {
+      const zone = event.target.closest && event.target.closest(".upload-dropzone");
+      if (zone) zone.classList.remove("is-drag");
+    });
+    document.addEventListener("drop", (event) => {
+      const zone = event.target.closest && event.target.closest(".upload-dropzone");
+      if (!zone) return;
+      event.preventDefault();
+      zone.classList.remove("is-drag");
+      const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) onCardFile(file, zone.dataset.id);
+    });
     document.addEventListener("keydown", (event) => {
       const target = event.target;
       const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+      const qsOpen = $("#quick-search") && !$("#quick-search").hidden;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        if (!$("#modal").hidden) closeModal();
-        focusSearch();
+        if (qsOpen) closeQuickSearch();
+        else {
+          if (!$("#modal").hidden) closeModal();
+          openQuickSearch();
+        }
+        return;
+      }
+      if (qsOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+        const hits = $$("#qs-results .qs-hit");
+        if (!hits.length) return;
+        event.preventDefault();
+        qsActive = event.key === "ArrowDown" ? Math.min(qsActive + 1, hits.length - 1) : Math.max(qsActive - 1, 0);
+        renderQuickSearch();
+        return;
+      }
+      if (qsOpen && event.key === "Enter" && target && target.id === "qs-input") {
+        event.preventDefault();
+        const hit = $("#qs-results .qs-hit.is-active") || $("#qs-results .qs-catalog");
+        if (hit) handleAction(hit, event);
         return;
       }
       if (event.key === "Escape") {
-        if (!$("#modal").hidden) closeModal();
+        if (qsOpen) closeQuickSearch();
+        else if (!$("#modal").hidden) closeModal();
         else if (typing && state.search) {
           setSearch("", null);
           renderApps();
@@ -2676,7 +3983,7 @@
       }
       if (!typing && event.key === "/") {
         event.preventDefault();
-        focusSearch();
+        openQuickSearch();
         return;
       }
       if ((event.key === "Enter" || event.key === " ") && !typing && target.matches("[data-action][role='button']")) {
@@ -2686,6 +3993,7 @@
     });
 
     $$(".nav-item").forEach((item) => item.addEventListener("click", () => {
+      if (!item.dataset.view) return;
       if (item.dataset.view === "actions") state.actions.tool = null;
       setView(item.dataset.view);
     }));
@@ -2693,18 +4001,36 @@
 
     const onSearch = debounce((value, source) => {
       setSearch(value, source);
+      // Typing in the hero search sends the user to the catalog; keep the query in the catalog's own
+      // search box (and the caret in it) so the search bar never disappears mid-typing.
       if (value.trim() && state.view !== "apps") {
         setView("apps");
-        const input = $("#search");
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
+        if (source === "hero-search") {
+          const field = $("#search");
+          if (field) {
+            field.focus();
+            const end = field.value.length;
+            try { field.setSelectionRange(end, end); } catch (_) { /* type=search may block selection */ }
+          }
+        }
       }
       renderApps();
     }, 120);
-    ["search", "hero-search"].forEach((id) => $(`#${id}`).addEventListener("input", (e) => {
-      syncSearchClear(e.target.value);
-      onSearch(e.target.value, id);
-    }));
+    ["search", "hero-search"].forEach((id) => {
+      const field = $(`#${id}`);
+      if (!field) return;
+      field.addEventListener("input", (e) => {
+        syncSearchClear(e.target.value);
+        onSearch(e.target.value, id);
+      });
+    });
+    const qsInput = $("#qs-input");
+    if (qsInput) qsInput.addEventListener("input", () => { qsActive = 0; renderQuickSearch(); });
+    document.addEventListener("input", (event) => {
+      if (event.target.id !== "pypi-search") return;
+      state.pypi.q = event.target.value;
+      schedulePypiSearch();
+    });
 
     $("#os-filter").addEventListener("change", (e) => { state.os = e.target.value; renderApps(); });
     $("#sort-select").addEventListener("change", (e) => { state.sort = e.target.value; renderApps(); });
@@ -2725,8 +4051,16 @@
     });
     $("#modal-body").addEventListener("input", (e) => {
       if (e.target.id === "cu-folder" && state.cardUpload) state.cardUpload.folder = e.target.value;
+      if (e.target.id === "cu-notes" && state.cardUpload) state.cardUpload.notes = e.target.value;
     });
     $("#modal-body").addEventListener("change", (e) => {
+      if (e.target.id === "modal-sort") {
+        state.modalSort = e.target.value;
+        refreshModal();
+        const sel = $("#modal-sort");
+        if (sel) sel.focus();
+        return;
+      }
       if (e.target.id !== "cu-overwrite" || !state.cardUpload) return;
       state.cardUpload.overwrite = e.target.checked;
       if (state.cardUpload.exists) {
@@ -2765,7 +4099,7 @@
     // dropzone (docker.js).
     const dropTarget = (e) => {
       if (!withFiles(e) || !(e.target instanceof Element)) return null;
-      const card = e.target.closest(".hub-card:not([disabled])");
+      const card = e.target.closest(".hub-card:not(.is-disabled)");
       if (card && !state.actions.tool) return card.dataset.tool;
       return e.target.closest("#actions-tool-nexus") ? "nexus-tool" : null;
     };

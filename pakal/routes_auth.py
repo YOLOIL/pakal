@@ -94,22 +94,23 @@ def _enrich_from_directory(identity: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.get("/api/auth/sso/login")
-def sso_login(request: Request, silent: int = 0, next: Optional[str] = None,  # noqa: A002
+def sso_login(request: Request, silent: int = 0, auto: int = 0, next: Optional[str] = None,  # noqa: A002
               base_scopes: int = 0) -> RedirectResponse:
     cfg = sso.load()
     target = _safe_next(next)
     if not sso.is_active(cfg):
         return RedirectResponse(_with_flag(target, sso="disabled"), status_code=303, headers=NO_STORE)
 
+    passive = bool(silent) or bool(auto)
     tx = sso.new_transaction()
     scope = sso.scopes(cfg, base_only=bool(base_scopes))
     now = int(time.time())
     cookie = jwt.encode({
         "scope": "sso_tx", "state": tx["state"], "nonce": tx["nonce"], "verifier": tx["verifier"],
-        "next": target, "silent": bool(silent), "extra": scope != sso.scopes(cfg, base_only=True),
+        "next": target, "silent": passive, "extra": scope != sso.scopes(cfg, base_only=True),
         "iat": now, "exp": now + TX_TTL,
     }, _jwt_secret(), algorithm=JWT_ALGORITHM)
-    response = RedirectResponse(sso.authorization_url(cfg, tx, bool(silent), scope), status_code=303, headers=NO_STORE)
+    response = RedirectResponse(sso.authorization_url(cfg, tx, passive, scope), status_code=303, headers=NO_STORE)
     response.set_cookie(TX_COOKIE, cookie, max_age=TX_TTL, httponly=True, secure=cookie_secure(request),
                         samesite="lax", path=TX_PATH)
     return response
@@ -234,12 +235,57 @@ def ldap_login(body: CredentialsIn, request: Request) -> JSONResponse:
 # --------------------------------------------------------------------------- #
 
 
+def _sso_reachable(cfg: dict, active: bool, signed_in: bool) -> bool:
+    """Reachability hint for anonymous visitors - never blocks the request and stays optimistic.
+
+    A slow, flaky or failed probe must not report ``False``, because the browser gates the silent
+    auto-login and the sign-in button on this flag. Only a *confirmed* recent failure (cached by the
+    background probe) reports ``False``; everything else (including a probe error) stays reachable.
+    """
+    if not active or signed_in:
+        return active
+    try:
+        return bool(sso.reachable_hint(cfg))
+    except Exception:  # noqa: BLE001 - reachability is a hint; silent login and the button must still work
+        log.exception("SSO reachability check failed")
+        return True
+
+
 @router.get("/api/auth/me")
 def me(request: Request) -> JSONResponse:
     cfg = sso.load()
-    active = sso.is_active(cfg)
+    try:
+        active = bool(sso.is_active(cfg))
+    except Exception:  # noqa: BLE001 - a bad SSO record must not hide the sign-in button
+        log.exception("Cannot read SSO settings for /api/auth/me")
+        active = False
+    try:
+        ldap_enabled = bool(directory.configured())
+    except Exception:  # noqa: BLE001 - a bad LDAP record must not hide the sign-in button
+        log.exception("Cannot read LDAP settings for /api/auth/me")
+        ldap_enabled = False
     user = current_user(request)
     admin = portal_admin(request)
+    # A local/LDAP admin who signed in to the console has an admin-session cookie but no portal (SSO/LDAP)
+    # session. When they click "Back to Portal" they must stay connected - never shown as signed-out and
+    # never bounced into a silent SSO redirect - so fall back to the console session for the portal identity.
+    admin_session = None
+    if not user:
+        admin_token = request.cookies.get(COOKIE_NAME)
+        admin_session = decode_token(admin_token) if admin_token else None
+    signed_in = bool(user or admin_session)
+    if user:
+        user_payload: Optional[Dict[str, Any]] = {
+            "username": user["sub"], "name": user.get("name") or user["sub"], "email": user.get("email", ""),
+            "source": user.get("src", "sso"), "admin": bool(user.get("admin")),
+        }
+    elif admin_session:
+        user_payload = {
+            "username": admin_session["sub"], "name": admin_session.get("name") or admin_session["sub"],
+            "email": "", "source": admin_session.get("src", "local"), "admin": True,
+        }
+    else:
+        user_payload = None
     body = {
         # The console path is only disclosed to admins; everyone else never learns it from the portal.
         "admin": {
@@ -247,14 +293,12 @@ def me(request: Request) -> JSONResponse:
             "upload_extensions": list(config.INSTALLER_EXTENSIONS), "upload_max_mb": config.ADMIN_APP_UPLOAD_MAX_MB,
         } if admin else {"allowed": False, "path": None},
         "sso_enabled": active,
-        "sso_reachable": sso.reachable(cfg) if active and not user else active,
+        "sso_reachable": _sso_reachable(cfg, active, signed_in),
         "sso_cooldown_ms": int(cfg.get("cooldown_after_logout_ms", 10000)),
-        "ldap_enabled": directory.configured(),
-        "authenticated": bool(user),
-        "user": {
-            "username": user["sub"], "name": user.get("name") or user["sub"], "email": user.get("email", ""),
-            "source": user.get("src", "sso"), "admin": bool(user.get("admin")),
-        } if user else None,
+        "ldap_enabled": ldap_enabled,
+        "login_enabled": active or ldap_enabled,
+        "authenticated": signed_in,
+        "user": user_payload,
         "ip": client_ip(request),
         "server_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
@@ -281,7 +325,7 @@ def logout(request: Request) -> JSONResponse:
                              "relogin": via_sso}, headers=NO_STORE)
     _clear_sso_cookies(response, request)
     if admin_token:
-        response.delete_cookie(COOKIE_NAME, path="/", samesite="strict", secure=cookie_secure(request), httponly=True)
+        response.delete_cookie(COOKIE_NAME, path="/", samesite="lax", secure=cookie_secure(request), httponly=True)
     return response
 
 
